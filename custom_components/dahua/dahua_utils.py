@@ -4,9 +4,10 @@ Various utilities for Dahua cameras
 
 import json
 import re
+from typing import Any
 
 
-def dahua_brightness_to_hass_brightness(bri_str: str) -> int:
+def dahua_brightness_to_hass_brightness(bri_str: str | None) -> int:
     """
     Converts a dahua brightness (which is 0 to 100 inclusive) and converts it to what HASS
     expects, which is 0 to 255 inclusive
@@ -19,7 +20,7 @@ def dahua_brightness_to_hass_brightness(bri_str: str) -> int:
     return int(current * 255)
 
 
-def hass_brightness_to_dahua_brightness(hass_brightness: int) -> int:
+def hass_brightness_to_dahua_brightness(hass_brightness: int | None) -> int:
     """
     Converts a HASS brightness (which is 0 to 255 inclusive) to a Dahua brightness (which is 0 to 100 inclusive)
     """
@@ -29,7 +30,7 @@ def hass_brightness_to_dahua_brightness(hass_brightness: int) -> int:
 
 
 # https://github.com/rroller/dahua/issues/166
-def parse_event(data: str) -> list[dict[str, any]]:
+def parse_event(data: str) -> list[dict[str, Any]]:
     # This will turn the event stream data into a list of events, where each item in the list is a dictionary and where
     # the key of the dictionary is the key is for example "Code" and the value is "VideoMotion", etc
     # That's a little hard to explain... so look at this example...

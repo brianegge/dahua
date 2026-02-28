@@ -70,4 +70,4 @@
 |------|--------|-------|
 | async-dependency | **Pass** | All I/O uses aiohttp; no sync libraries |
 | inject-websession | **Pass** | Uses `async_create_clientsession(hass, verify_ssl=False)` |
-| strict-typing | **Fail** | No strict mypy config |
+| strict-typing | **Pass** | `py.typed` marker, `mypy --strict` passes all 17 source files |

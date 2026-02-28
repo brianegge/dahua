@@ -1,13 +1,16 @@
 """Dahua Digest Auth Support"""
 
+from __future__ import annotations
+
 import os
 import time
 import hashlib
+from typing import Any
+
 import aiohttp
 from aiohttp.client_reqrep import ClientResponse
 from aiohttp.client_exceptions import ClientError
 from yarl import URL
-
 
 # Seems that aiohttp doesn't support Diegest Auth, which Dahua cams require. So I had to bake it in here.
 # Copied and then modified from https://github.com/aio-libs/aiohttp/pull/2213
@@ -25,20 +28,27 @@ class DigestAuth:
         username: str,
         password: str,
         session: aiohttp.ClientSession,
-        previous=None,
-    ):
+        previous: dict[str, Any] | None = None,
+    ) -> None:
         if previous is None:
             previous = {}
 
         self.username = username
         self.password = password
-        self.last_nonce = previous.get("last_nonce", "")
-        self.nonce_count = previous.get("nonce_count", 0)
-        self.challenge = previous.get("challenge")
-        self.args = {}
+        self.last_nonce: str = previous.get("last_nonce", "")
+        self.nonce_count: int = previous.get("nonce_count", 0)
+        self.challenge: dict[str, str] | None = previous.get("challenge")
+        self.args: dict[str, Any] = {}
         self.session = session
 
-    async def request(self, method, url, *, headers=None, **kwargs):
+    async def request(
+        self,
+        method: str,
+        url: str,
+        *,
+        headers: dict[str, str] | None = None,
+        **kwargs: Any,
+    ) -> ClientResponse:
         """Makes a request"""
         if headers is None:
             headers = {}
@@ -58,11 +68,11 @@ class DigestAuth:
 
         return response
 
-    def _build_digest_header(self, method, url):
+    def _build_digest_header(self, method: str, url: str) -> str:
         """
         :rtype: str
         """
-
+        assert self.challenge is not None
         realm = self.challenge["realm"]
         nonce = self.challenge["nonce"]
         qop = self.challenge.get("qop")
@@ -80,10 +90,10 @@ class DigestAuth:
         else:
             return ""
 
-        def H(x):
+        def H(x: str) -> str:
             return hash_fn(x.encode()).hexdigest()
 
-        def KD(s, d):
+        def KD(s: str, d: str) -> str:
             return H("%s:%s" % (s, d))
 
         path = URL(url).path_qs
@@ -141,7 +151,7 @@ class DigestAuth:
 
         return "Digest %s" % base
 
-    async def _handle_401(self, response: ClientResponse):
+    async def _handle_401(self, response: ClientResponse) -> ClientResponse:
         """
         Takes the given response and tries digest-auth, if needed.
         :rtype: ClientResponse
@@ -165,7 +175,7 @@ class DigestAuth:
         return response
 
 
-def parse_pair(pair):
+def parse_pair(pair: str) -> tuple[str, str]:
     key, value = pair.strip().split("=", 1)
 
     # If it has a trailing comma, remove it.
@@ -179,7 +189,7 @@ def parse_pair(pair):
     return key, value
 
 
-def parse_key_value_list(header):
+def parse_key_value_list(header: str) -> dict[str, str]:
     return {
         key: value
         for key, value in [parse_pair(header_pair) for header_pair in header.split(",")]

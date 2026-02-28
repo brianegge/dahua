@@ -2,13 +2,16 @@
 Custom integration to integrate Dahua cameras with Home Assistant.
 """
 
+from __future__ import annotations
+
 import asyncio
 import hashlib
 import logging
 import time
 from datetime import timedelta
-from typing import Any, Dict
+from typing import Any
 
+import aiohttp
 from aiohttp import ClientError, ClientResponseError
 from homeassistant.components.tag import async_scan_tag
 from homeassistant.config_entries import ConfigEntry
@@ -42,16 +45,16 @@ SCAN_INTERVAL_SECONDS = timedelta(seconds=30)
 _LOGGER: logging.Logger = logging.getLogger(__package__)
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: DahuaConfigEntry):
+async def async_setup_entry(hass: HomeAssistant, entry: DahuaConfigEntry) -> bool:
     """Set up this integration using UI."""
-    username = entry.data.get(CONF_USERNAME)
-    password = entry.data.get(CONF_PASSWORD)
-    address = entry.data.get(CONF_ADDRESS)
-    port = int(entry.data.get(CONF_PORT))
-    rtsp_port = int(entry.data.get(CONF_RTSP_PORT))
-    events = entry.data.get(CONF_EVENTS)
-    name = entry.data.get(CONF_NAME)
-    channel = entry.data.get(CONF_CHANNEL, 0)
+    username = str(entry.data[CONF_USERNAME])
+    password = str(entry.data[CONF_PASSWORD])
+    address = str(entry.data[CONF_ADDRESS])
+    port = int(entry.data[CONF_PORT])
+    rtsp_port = int(entry.data[CONF_RTSP_PORT])
+    events: list[str] = entry.data.get(CONF_EVENTS, [])
+    name = str(entry.data.get(CONF_NAME, ""))
+    channel = int(entry.data.get(CONF_CHANNEL, 0))
 
     session = async_create_clientsession(hass, verify_ssl=False)
 
@@ -91,14 +94,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: DahuaConfigEntry):
     return True
 
 
-class DahuaDataUpdateCoordinator(DataUpdateCoordinator):
+class DahuaDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     """Class to manage fetching data from the API."""
 
     def __init__(
         self,
         hass: HomeAssistant,
-        entry: ConfigEntry,
-        events: list,
+        entry: ConfigEntry["DahuaDataUpdateCoordinator"],
+        events: list[str],
         address: str,
         port: int,
         rtsp_port: int,
@@ -106,7 +109,7 @@ class DahuaDataUpdateCoordinator(DataUpdateCoordinator):
         password: str,
         name: str,
         channel: int,
-        session=None,
+        session: aiohttp.ClientSession,
     ) -> None:
         """Initialize the coordinator."""
         # The client used to communicate with Dahua devices
@@ -115,11 +118,11 @@ class DahuaDataUpdateCoordinator(DataUpdateCoordinator):
         )
 
         self.config_entry = entry
-        self.platforms = []
+        self.platforms: list[str] = []
         self.initialized = False
         self.model = ""
-        self.connected = None
-        self.events: list = events
+        self.connected: bool | None = None
+        self.events: list[str] = events
         self._supports_coaxial_control = False
         self._supports_disarming_linkage = False
         self._supports_event_notifications = False
@@ -154,17 +157,17 @@ class DahuaDataUpdateCoordinator(DataUpdateCoordinator):
         self._password = password
 
         # Async tasks for event streaming (replaces threads)
-        self._event_task: asyncio.Task | None = None
-        self._vto_task: asyncio.Task | None = None
+        self._event_task: asyncio.Task[None] | None = None
+        self._vto_task: asyncio.Task[None] | None = None
         self._vto_client: DahuaVTOClient | None = None
 
         # A dictionary of event name (CrossLineDetection, VideoMotion, etc) to a listener for that event
         # The key will be formed from self.get_event_key(event_name) and includes the channel
-        self._dahua_event_listeners: Dict[str, CALLBACK_TYPE] = dict()
+        self._dahua_event_listeners: dict[str, CALLBACK_TYPE] = dict()
 
         # A dictionary of event name (CrossLineDetection, VideoMotion, etc) to the time the event fire or was cleared.
         # If cleared the time will be 0. The time unit is seconds epoch
-        self._dahua_event_timestamp: Dict[str, int] = dict()
+        self._dahua_event_timestamp: dict[str, int] = dict()
 
         self._floodlight_mode = 2
 
@@ -172,16 +175,16 @@ class DahuaDataUpdateCoordinator(DataUpdateCoordinator):
             hass, _LOGGER, name=DOMAIN, update_interval=SCAN_INTERVAL_SECONDS
         )
 
-    async def async_start_event_listener(self):
+    async def async_start_event_listener(self) -> None:
         """Starts the event listeners for IP cameras (this does not work for doorbells (VTO))"""
         if self.events is not None:
             self._event_task = asyncio.create_task(self._async_stream_events())
 
-    async def async_start_vto_event_listener(self):
+    async def async_start_vto_event_listener(self) -> None:
         """Starts the event listeners for doorbells (VTO). This will not work for IP cameras"""
         self._vto_task = asyncio.create_task(self._async_stream_vto_events())
 
-    async def _async_stream_events(self):
+    async def _async_stream_events(self) -> None:
         """Continuously stream events from the camera, reconnecting on failure."""
         while True:
             start_time = time.monotonic()
@@ -205,7 +208,7 @@ class DahuaDataUpdateCoordinator(DataUpdateCoordinator):
             else:
                 _LOGGER.debug("Reconnecting to event stream for %s", self._address)
 
-    async def _async_stream_vto_events(self):
+    async def _async_stream_vto_events(self) -> None:
         """Continuously stream VTO events from a doorbell, reconnecting on failure."""
         while True:
             try:
@@ -238,7 +241,7 @@ class DahuaDataUpdateCoordinator(DataUpdateCoordinator):
                 )
                 await asyncio.sleep(30)
 
-    async def async_stop(self, event: Any = None):
+    async def async_stop(self, event: Any = None) -> None:
         """Stop anything we need to stop"""
         if self._event_task is not None:
             self._event_task.cancel()
@@ -247,9 +250,9 @@ class DahuaDataUpdateCoordinator(DataUpdateCoordinator):
             self._vto_task.cancel()
             self._vto_task = None
 
-    async def _async_update_data(self):
+    async def _async_update_data(self) -> dict[str, Any]:
         """Reload the camera information"""
-        data = {}
+        data: dict[str, Any] = {}
 
         # Do the one time initialization (do this when Home Assistant starts)
         if not self.initialized:
@@ -280,9 +283,9 @@ class DahuaDataUpdateCoordinator(DataUpdateCoordinator):
                         dt = await self.client.get_device_type()
                         device_type = dt.get("type")
                 data["model"] = device_type
-                self.model = device_type
-                self.machine_name = data.get("table.General.MachineName")
-                self._serial_number = data.get("serialNumber")
+                self.model = str(device_type) if device_type else ""
+                self.machine_name = str(data.get("table.General.MachineName", ""))
+                self._serial_number = str(data.get("serialNumber", ""))
 
                 try:
                     await self.client.async_get_snapshot(0)
@@ -407,7 +410,8 @@ class DahuaDataUpdateCoordinator(DataUpdateCoordinator):
                     _LOGGER.warning(
                         "Authentication failed for %s, starting reauth", self._address
                     )
-                    self.config_entry.async_start_reauth(self.hass)
+                    if self.config_entry is not None:
+                        self.config_entry.async_start_reauth(self.hass)
                     raise UpdateFailed("Authentication failed") from exception
                 _LOGGER.error(
                     "Failed to initialize device at %s",
@@ -524,7 +528,7 @@ class DahuaDataUpdateCoordinator(DataUpdateCoordinator):
             )
             raise UpdateFailed() from exception
 
-    def on_receive_vto_event(self, event: dict):
+    def on_receive_vto_event(self, event: dict[str, Any]) -> None:
         event["DeviceName"] = self.get_device_name()
         _LOGGER.debug(f"VTO Data received: {event}")
         self.hass.bus.fire("dahua_event_received", event)
@@ -597,7 +601,7 @@ class DahuaDataUpdateCoordinator(DataUpdateCoordinator):
                         self._dahua_event_timestamp[event_key] = 0
                 listener()
 
-    def on_receive(self, data_bytes: bytes, channel: int):
+    def on_receive(self, data_bytes: bytes, channel: int) -> None:
         """
         Takes in bytes from the Dahua event stream, converts to a string, parses to a dict and fires an event with the data on the HA event bus
         Example input:
@@ -662,12 +666,12 @@ class DahuaDataUpdateCoordinator(DataUpdateCoordinator):
                     self._dahua_event_timestamp[event_key] = 0
                     listener()
 
-    def translate_event_code(self, event: dict):
+    def translate_event_code(self, event: dict[str, Any]) -> str:
         """
         translate_event_code will try to convert the event code to a less specific event code if the device doesn't have a listener for the more specific type
         Example event codes: VideoMotion, CrossLineDetection, BackKeyLight, DoorStatus
         """
-        code = event.get("Code", "")
+        code: str = str(event.get("Code", ""))
 
         # For CrossLineDetection, the event data will look like this... and if there's a human detected then we'll use the SmartMotionHuman code instead
         # {
@@ -702,7 +706,9 @@ class DahuaDataUpdateCoordinator(DataUpdateCoordinator):
         event_key = self.get_event_key(event_name)
         return self._dahua_event_timestamp.get(event_key, 0)
 
-    def add_dahua_event_listener(self, event_name: str, listener: CALLBACK_TYPE):
+    def add_dahua_event_listener(
+        self, event_name: str, listener: CALLBACK_TYPE
+    ) -> None:
         """Adds an event listener for the given event (CrossLineDetection, etc).
         This callback will be called when the event fire"""
         event_key = self.get_event_key(event_name)
@@ -805,35 +811,40 @@ class DahuaDataUpdateCoordinator(DataUpdateCoordinator):
     def is_motion_detection_enabled(self) -> bool:
         """Returns true if motion detection is enabled for the camera"""
         return (
-            self.data.get(
-                "table.MotionDetect[{0}].Enable".format(self._channel), ""
+            str(
+                self.data.get(
+                    "table.MotionDetect[{0}].Enable".format(self._channel), ""
+                )
             ).lower()
             == "true"
         )
 
     def is_disarming_linkage_enabled(self) -> bool:
         """Returns true if disarming linkage is enable"""
-        return self.data.get("table.DisableLinkage.Enable", "").lower() == "true"
+        return str(self.data.get("table.DisableLinkage.Enable", "")).lower() == "true"
 
     def is_event_notifications_enabled(self) -> bool:
         """Returns true if event notifications is enable"""
-        return self.data.get("table.DisableEventNotify.Enable", "").lower() == "false"
+        return (
+            str(self.data.get("table.DisableEventNotify.Enable", "")).lower() == "false"
+        )
 
     def is_smart_motion_detection_enabled(self) -> bool:
         """Returns true if smart motion detection is enabled"""
         if self.supports_smart_motion_detection_amcrest():
             return (
-                self.data.get("table.VideoAnalyseRule[0][0].Enable", "").lower()
+                str(self.data.get("table.VideoAnalyseRule[0][0].Enable", "")).lower()
                 == "true"
             )
         else:
             return (
-                self.data.get("table.SmartMotionDetect[0].Enable", "").lower() == "true"
+                str(self.data.get("table.SmartMotionDetect[0].Enable", "")).lower()
+                == "true"
             )
 
     def is_siren_on(self) -> bool:
         """Returns true if the camera siren is on"""
-        return self.data.get("status.status.Speaker", "").lower() == "on"
+        return str(self.data.get("status.status.Speaker", "")).lower() == "on"
 
     def get_device_name(self) -> str:
         """returns the device name, e.g. Cam 2"""
@@ -847,7 +858,7 @@ class DahuaDataUpdateCoordinator(DataUpdateCoordinator):
         """returns the device model, e.g. IPC-HDW3849HP-AS-PV"""
         return self.model
 
-    def get_firmware_version(self) -> str:
+    def get_firmware_version(self) -> str | None:
         """returns the device firmware e.g."""
         return self.data.get("version")
 
@@ -858,7 +869,7 @@ class DahuaDataUpdateCoordinator(DataUpdateCoordinator):
             return "{0}_{1}".format(self._serial_number, self._channel)
         return self._serial_number
 
-    def get_event_list(self) -> list:
+    def get_event_list(self) -> list[str]:
         """
         Returns the list of events selected when configuring the camera in Home Assistant. For example:
         [VideoMotion, VideoLoss, CrossLineDetection]
@@ -868,7 +879,7 @@ class DahuaDataUpdateCoordinator(DataUpdateCoordinator):
     def is_infrared_light_on(self) -> bool:
         """returns true if the infrared light is on"""
         return (
-            self.data.get("table.Lighting[{0}][0].Mode".format(self._channel), "")
+            str(self.data.get("table.Lighting[{0}][0].Mode".format(self._channel), ""))
             == "Manual"
         )
 
@@ -885,11 +896,13 @@ class DahuaDataUpdateCoordinator(DataUpdateCoordinator):
         # profile_mode 0=day, 1=night, 2=scene
         profile_mode = self.get_profile_mode()
         return (
-            self.data.get(
-                "table.Lighting_V2[{0}][{1}][0].Mode".format(
-                    self._channel, profile_mode
-                ),
-                "",
+            str(
+                self.data.get(
+                    "table.Lighting_V2[{0}][{1}][0].Mode".format(
+                        self._channel, profile_mode
+                    ),
+                    "",
+                )
             )
             == "Manual"
         )
@@ -897,21 +910,24 @@ class DahuaDataUpdateCoordinator(DataUpdateCoordinator):
     def is_flood_light_on(self) -> bool:
         if self._supports_floodlightmode:
             # 'coaxialControlIO.cgi?action=getStatus&channel=1'
-            return self.data.get("status.status.WhiteLight", "") == "On"
+            return str(self.data.get("status.status.WhiteLight", "")) == "On"
         else:
             """Return true if the amcrest flood light light is on"""
             # profile_mode 0=day, 1=night, 2=scene
             profile_mode = self.get_profile_mode()
             return (
-                self.data.get(
-                    f"table.Lighting_V2[{self._channel}][{profile_mode}][1].Mode"
+                str(
+                    self.data.get(
+                        f"table.Lighting_V2[{self._channel}][{profile_mode}][1].Mode",
+                        "",
+                    )
                 )
                 == "Manual"
             )
 
     def is_ring_light_on(self) -> bool:
         """Return true if ring light is on for an Amcrest Doorbell"""
-        return self.data.get("table.LightGlobal[0].Enable") == "true"
+        return str(self.data.get("table.LightGlobal[0].Enable", "")) == "true"
 
     def get_illuminator_brightness(self) -> int:
         """Return the brightness of the illuminator light, as reported by the camera itself, between 0..255 inclusive"""
@@ -923,7 +939,7 @@ class DahuaDataUpdateCoordinator(DataUpdateCoordinator):
 
     def is_security_light_on(self) -> bool:
         """Return true if the security light is on. This is the red/blue flashing light"""
-        return self.data.get("status.status.WhiteLight", "") == "On"
+        return str(self.data.get("status.status.WhiteLight", "")) == "On"
 
     def get_profile_mode(self) -> str:
         # profile_mode 0=day, 1=night, 2=scene
@@ -957,7 +973,7 @@ class DahuaDataUpdateCoordinator(DataUpdateCoordinator):
         """True if smart motion detection is supported for an amcrest device"""
         return self.model == "AD410" or self.model == "DB61i"
 
-    def get_vto_client(self) -> DahuaVTOClient:
+    def get_vto_client(self) -> DahuaVTOClient | None:
         """
         Returns an instance of the connected VTO client if this is a VTO device. We need this because there's different
         ways to call a VTO device and the VTO client will handle that. For example, to hang up a call
@@ -966,7 +982,7 @@ class DahuaDataUpdateCoordinator(DataUpdateCoordinator):
 
 
 async def async_remove_config_entry_device(
-    hass: HomeAssistant, config_entry: DahuaConfigEntry, device_entry
+    hass: HomeAssistant, config_entry: DahuaConfigEntry, device_entry: Any
 ) -> bool:
     """Allow manual removal of a device from the integration."""
     return True

@@ -4,10 +4,13 @@ Dahua RPC2 API Client
 Auth taken and modified and added to, from https://gist.github.com/gxfxyz/48072a72be3a169bc43549e676713201
 """
 
+from __future__ import annotations
+
 import hashlib
 import json
 import logging
 import sys
+from typing import Any
 
 import aiohttp
 
@@ -33,23 +36,23 @@ class DahuaRpc2Client:
         self._password = password
         self._session = session
         self._rtsp_port = rtsp_port
-        self._session_id = None
-        self._id = 0
+        self._session_id: str | None = None
+        self._id: int = 0
         protocol = "https" if int(port) == 443 else "http"
         self._base = "{0}://{1}:{2}".format(protocol, address, port)
 
     async def request(
         self,
-        method,
-        params=None,
-        object_id=None,
-        extra=None,
-        url=None,
-        verify_result=True,
-    ):
+        method: str,
+        params: dict[str, Any] | None = None,
+        object_id: int | None = None,
+        extra: dict[str, Any] | None = None,
+        url: str | None = None,
+        verify_result: bool = True,
+    ) -> dict[str, Any]:
         """Make an RPC request."""
         self._id += 1
-        data = {"method": method, "id": self._id}
+        data: dict[str, Any] = {"method": method, "id": self._id}
         if params is not None:
             data["params"] = params
         if object_id:
@@ -62,14 +65,14 @@ class DahuaRpc2Client:
             url = "{0}/RPC2".format(self._base)
 
         resp = await self._session.post(url, data=json.dumps(data))
-        resp_json = json.loads(await resp.text())
+        resp_json: dict[str, Any] = json.loads(await resp.text())
 
         if verify_result and resp_json["result"] is False:
             raise ConnectionError(str(resp))
 
         return resp_json
 
-    async def login(self):
+    async def login(self) -> dict[str, Any]:
         """Dahua RPC login.
         Reversed from rpcCore.js (login, getAuth & getAuthByType functions).
         Also referenced:
@@ -95,12 +98,12 @@ class DahuaRpc2Client:
         random = r["params"]["random"]
 
         # Password encryption algorithm. Reversed from rpcCore.getAuthByType
-        pwd_phrase = self._username + ":" + realm + ":" + self._password
-        if isinstance(pwd_phrase, unicode):
+        pwd_phrase: str | bytes = self._username + ":" + realm + ":" + self._password
+        if isinstance(pwd_phrase, str):
             pwd_phrase = pwd_phrase.encode("utf-8")
         pwd_hash = hashlib.md5(pwd_phrase).hexdigest().upper()
-        pass_phrase = self._username + ":" + random + ":" + pwd_hash
-        if isinstance(pass_phrase, unicode):
+        pass_phrase: str | bytes = self._username + ":" + random + ":" + pwd_hash
+        if isinstance(pass_phrase, str):
             pass_phrase = pass_phrase.encode("utf-8")
         pass_hash = hashlib.md5(pass_phrase).hexdigest().upper()
 
@@ -126,7 +129,7 @@ class DahuaRpc2Client:
         except Exception:
             return False
 
-    async def current_time(self):
+    async def current_time(self) -> Any:
         """Get the current time on the device."""
         response = await self.request(method="global.getCurrentTime")
         return response["params"]["time"]
@@ -134,9 +137,10 @@ class DahuaRpc2Client:
     async def get_serial_number(self) -> str:
         """Gets the serial number of the device."""
         response = await self.request(method="magicBox.getSerialNo")
-        return response["params"]["sn"]
+        result: str = response["params"]["sn"]
+        return result
 
-    async def get_config(self, params):
+    async def get_config(self, params: dict[str, Any]) -> Any:
         """Gets config for the supplied params"""
         response = await self.request(method="configManager.getConfig", params=params)
         return response["params"]
@@ -144,7 +148,8 @@ class DahuaRpc2Client:
     async def get_device_name(self) -> str:
         """Get the device name"""
         data = await self.get_config({"name": "General"})
-        return data["table"]["MachineName"]
+        result: str = data["table"]["MachineName"]
+        return result
 
     async def get_coaxial_control_io_status(
         self, channel: int
@@ -153,4 +158,4 @@ class DahuaRpc2Client:
         response = await self.request(
             method="CoaxialControlIO.getStatus", params={"channel": channel}
         )
-        return CoaxialControlIOStatus(response)
+        return CoaxialControlIOStatus(api_response=response)
