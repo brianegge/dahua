@@ -1,4 +1,5 @@
 """Switch platform for dahua."""
+
 from aiohttp import ClientError
 from homeassistant.core import HomeAssistant
 from homeassistant.components.switch import SwitchEntity
@@ -9,7 +10,9 @@ from .entity import DahuaBaseEntity
 from .client import SIREN_TYPE
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: DahuaConfigEntry, async_add_devices):
+async def async_setup_entry(
+    hass: HomeAssistant, entry: DahuaConfigEntry, async_add_devices
+):
     """Setup sensor platform."""
     coordinator: DahuaDataUpdateCoordinator = entry.runtime_data
 
@@ -21,13 +24,18 @@ async def async_setup_entry(hass: HomeAssistant, entry: DahuaConfigEntry, async_
     # But only some cams have a siren, very few do actually
     if coordinator.supports_siren():
         devices.append(DahuaSirenBinarySwitch(coordinator, entry))
-    if coordinator.supports_smart_motion_detection() or coordinator.supports_smart_motion_detection_amcrest():
+    if (
+        coordinator.supports_smart_motion_detection()
+        or coordinator.supports_smart_motion_detection_amcrest()
+    ):
         devices.append(DahuaSmartMotionDetectionBinarySwitch(coordinator, entry))
 
     try:
         await coordinator.client.async_get_disarming_linkage()
         devices.append(DahuaDisarmingLinkageBinarySwitch(coordinator, entry))
-        devices.append(DahuaDisarmingEventNotificationsLinkageBinarySwitch(coordinator, entry))
+        devices.append(
+            DahuaDisarmingEventNotificationsLinkageBinarySwitch(coordinator, entry)
+        )
     except ClientError as exception:
         pass
 
@@ -118,7 +126,10 @@ class DahuaDisarmingLinkageBinarySwitch(DahuaBaseEntity, SwitchEntity):
         """
         return self._coordinator.is_disarming_linkage_enabled()
 
-class DahuaDisarmingEventNotificationsLinkageBinarySwitch(DahuaBaseEntity, SwitchEntity):
+
+class DahuaDisarmingEventNotificationsLinkageBinarySwitch(
+    DahuaBaseEntity, SwitchEntity
+):
     """will set the camera's event notifications when device is disarmed (Event -> Disarming -> Event Notifications in the UI)"""
 
     async def async_turn_on(self, **kwargs):  # pylint: disable=unused-argument
@@ -158,6 +169,7 @@ class DahuaDisarmingEventNotificationsLinkageBinarySwitch(DahuaBaseEntity, Switc
         Return true if the switch is on.
         """
         return self._coordinator.is_event_notifications_enabled()
+
 
 class DahuaSmartMotionDetectionBinarySwitch(DahuaBaseEntity, SwitchEntity):
     """Enables or disables the Smart Motion Detection option in the camera"""
@@ -199,7 +211,7 @@ class DahuaSmartMotionDetectionBinarySwitch(DahuaBaseEntity, SwitchEntity):
 
     @property
     def is_on(self):
-        """ Return true if the switch is on. """
+        """Return true if the switch is on."""
         return self._coordinator.is_smart_motion_detection_enabled()
 
 
@@ -209,13 +221,17 @@ class DahuaSirenBinarySwitch(DahuaBaseEntity, SwitchEntity):
     async def async_turn_on(self, **kwargs):  # pylint: disable=unused-argument
         """Turn on/enable the camera's siren"""
         channel = self._coordinator.get_channel()
-        await self._coordinator.client.async_set_coaxial_control_state(channel, SIREN_TYPE, True)
+        await self._coordinator.client.async_set_coaxial_control_state(
+            channel, SIREN_TYPE, True
+        )
         await self._coordinator.async_refresh()
 
     async def async_turn_off(self, **kwargs):  # pylint: disable=unused-argument
         """Turn off/disable camera siren"""
         channel = self._coordinator.get_channel()
-        await self._coordinator.client.async_set_coaxial_control_state(channel, SIREN_TYPE, False)
+        await self._coordinator.client.async_set_coaxial_control_state(
+            channel, SIREN_TYPE, False
+        )
         await self._coordinator.async_refresh()
 
     @property
