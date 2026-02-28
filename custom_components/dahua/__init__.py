@@ -986,6 +986,13 @@ class DahuaDataUpdateCoordinator(DataUpdateCoordinator):
         return self._vto_client
 
 
+async def async_remove_config_entry_device(
+    hass: HomeAssistant, config_entry: DahuaConfigEntry, device_entry
+) -> bool:
+    """Allow manual removal of a device from the integration."""
+    return True
+
+
 async def async_unload_entry(hass: HomeAssistant, entry: DahuaConfigEntry) -> bool:
     """Handle removal of an entry."""
     coordinator = entry.runtime_data
