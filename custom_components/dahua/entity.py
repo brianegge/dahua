@@ -9,7 +9,7 @@ import aiohttp
 from custom_components.dahua import DahuaDataUpdateCoordinator
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
-from .const import DOMAIN, ATTRIBUTION
+from .const import DOMAIN
 
 
 def dahua_command(func):

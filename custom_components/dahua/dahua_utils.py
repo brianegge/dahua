@@ -1,6 +1,7 @@
 """
 Various utilities for Dahua cameras
 """
+
 import json
 import re
 
@@ -46,7 +47,7 @@ def parse_event(data: str) -> list[dict[str, any]]:
     # }]
 
     # We will split on "--myboundary" and then skip the first 3 lines so we end up with a string that starts with Code=
-    event_blocks = re.split(r'--myboundary\n', data)
+    event_blocks = re.split(r"--myboundary\n", data)
 
     events = []
 
@@ -67,8 +68,8 @@ def parse_event(data: str) -> list[dict[str, any]]:
         # }
         # And we want to put each key/value pair into a dictionary...
         event = dict()
-        for key_value in event_block.split(';'):
-            key, value = key_value.split('=')
+        for key_value in event_block.split(";"):
+            key, value = key_value.split("=")
             event[key] = value
 
         # data is a json string, convert it to real json and add it back to the output dic

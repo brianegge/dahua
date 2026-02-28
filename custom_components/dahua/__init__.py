@@ -3,43 +3,39 @@ Custom integration to integrate Dahua cameras with Home Assistant.
 """
 
 import asyncio
-from typing import Any, Dict
+import hashlib
 import logging
 import time
-
 from datetime import timedelta
-
-from homeassistant.components.tag import async_scan_tag
-import hashlib
+from typing import Any, Dict
 
 from aiohttp import ClientError, ClientResponseError
+from homeassistant.components.tag import async_scan_tag
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import CALLBACK_TYPE, HomeAssistant
-
-type DahuaConfigEntry = ConfigEntry["DahuaDataUpdateCoordinator"]
-from homeassistant.exceptions import ConfigEntryNotReady, PlatformNotReady
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
-from homeassistant.helpers.aiohttp_client import async_create_clientsession
-from homeassistant.helpers.typing import ConfigType
 from homeassistant.const import EVENT_HOMEASSISTANT_STOP
+from homeassistant.core import CALLBACK_TYPE, HomeAssistant
+from homeassistant.exceptions import ConfigEntryNotReady, PlatformNotReady
+from homeassistant.helpers.aiohttp_client import async_create_clientsession
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from . import dahua_utils
 from .client import DahuaClient
-
 from .const import (
+    CONF_ADDRESS,
+    CONF_CHANNEL,
     CONF_EVENTS,
+    CONF_NAME,
     CONF_PASSWORD,
     CONF_PORT,
+    CONF_RTSP_PORT,
     CONF_USERNAME,
-    CONF_ADDRESS,
-    CONF_NAME,
     DOMAIN,
     PLATFORMS,
-    CONF_RTSP_PORT,
-    CONF_CHANNEL,
 )
 from .dahua_utils import parse_event
 from .vto import DahuaVTOClient
+
+type DahuaConfigEntry = ConfigEntry["DahuaDataUpdateCoordinator"]
 
 SCAN_INTERVAL_SECONDS = timedelta(seconds=30)
 
@@ -899,7 +895,6 @@ class DahuaDataUpdateCoordinator(DataUpdateCoordinator):
         )
 
     def is_flood_light_on(self) -> bool:
-
         if self._supports_floodlightmode:
             # 'coaxialControlIO.cgi?action=getStatus&channel=1'
             return self.data.get("status.status.WhiteLight", "") == "On"

@@ -92,7 +92,8 @@ def mock_client() -> AsyncMock:
     # Static/simple methods - use real implementations
     client.to_stream_name = DahuaClient.to_stream_name
     client.get_rtsp_stream_url.side_effect = (
-        lambda channel, subtype: f"rtsp://admin:password@192.168.1.108:554/cam/realmonitor?channel={channel}&subtype={subtype}"
+        lambda channel,
+        subtype: f"rtsp://admin:password@192.168.1.108:554/cam/realmonitor?channel={channel}&subtype={subtype}"
     )
 
     return client

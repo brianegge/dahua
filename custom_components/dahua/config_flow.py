@@ -252,9 +252,7 @@ class DahuaFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     def async_get_options_flow(config_entry):
         return DahuaOptionsFlowHandler()
 
-    async def _show_config_form_user(
-        self, user_input
-    ):  # pylint: disable=unused-argument
+    async def _show_config_form_user(self, user_input):  # pylint: disable=unused-argument
         """Show the configuration form to edit camera name."""
         return self.async_show_form(
             step_id="user",
@@ -274,9 +272,7 @@ class DahuaFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             errors=self._errors,
         )
 
-    async def _show_config_form_name(
-        self, user_input
-    ):  # pylint: disable=unused-argument
+    async def _show_config_form_name(self, user_input):  # pylint: disable=unused-argument
         """Show the configuration form to edit location data."""
         return self.async_show_form(
             step_id="name",

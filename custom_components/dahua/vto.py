@@ -2,6 +2,7 @@
 Copied and modified from https://github.com/elad-bar/DahuaVTO2MQTT
 Thanks to @elad-bar
 """
+
 import struct
 import sys
 import logging
@@ -11,10 +12,7 @@ import hashlib
 from json import JSONDecoder
 from typing import Optional, Callable
 
-PROTOCOLS = {
-    True: "https",
-    False: "http"
-}
+PROTOCOLS = {True: "https", False: "http"}
 
 _LOGGER: logging.Logger = logging.getLogger(__package__)
 
@@ -30,10 +28,7 @@ DAHUA_CONFIG_MANAGER_GETCONFIG = "configManager.getConfig"
 DAHUA_MAGICBOX_GETSOFTWAREVERSION = "magicBox.getSoftwareVersion"
 DAHUA_MAGICBOX_GETDEVICETYPE = "magicBox.getDeviceType"
 
-DAHUA_ALLOWED_DETAILS = [
-    DAHUA_DEVICE_TYPE,
-    DAHUA_SERIAL_NUMBER
-]
+DAHUA_ALLOWED_DETAILS = [DAHUA_DEVICE_TYPE, DAHUA_SERIAL_NUMBER]
 
 
 class DahuaVTOClient(asyncio.Protocol):
@@ -52,7 +47,14 @@ class DahuaVTOClient(asyncio.Protocol):
     data_handlers: {}
     buffer: bytearray
 
-    def __init__(self, host: str, username: str, password: str, is_ssl: bool, on_receive_vto_event):
+    def __init__(
+        self,
+        host: str,
+        username: str,
+        password: str,
+        is_ssl: bool,
+        on_receive_vto_event,
+    ):
         self.dahua_details = {}
         self.host = host
         self.username = username
@@ -87,16 +89,17 @@ class DahuaVTOClient(asyncio.Protocol):
         except Exception as ex:
             exc_type, exc_obj, exc_tb = sys.exc_info()
 
-            _LOGGER.error(f"Failed to handle message, error: {ex}, Line: {exc_tb.tb_lineno}")
+            _LOGGER.error(
+                f"Failed to handle message, error: {ex}, Line: {exc_tb.tb_lineno}"
+            )
 
     def data_received(self, data):
         _LOGGER.debug(f"Event data {self.host}: '{data}'")
 
         self.buffer += data
 
-        while b'\n' in self.buffer:
-
-            newline_index = self.buffer.find(b'\n') + 1
+        while b"\n" in self.buffer:
+            newline_index = self.buffer.find(b"\n") + 1
             packet = self.buffer[:newline_index]
             self.buffer = self.buffer[newline_index:]
 
@@ -108,12 +111,16 @@ class DahuaVTOClient(asyncio.Protocol):
 
                     message_id = message.get("id")
 
-                    handler: Callable = self.data_handlers.get(message_id, self.handle_default)
+                    handler: Callable = self.data_handlers.get(
+                        message_id, self.handle_default
+                    )
                     handler(message)
             except Exception as ex:
                 exc_type, exc_obj, exc_tb = sys.exc_info()
 
-                _LOGGER.error(f"Failed to handle message, error: {ex}, Line: {exc_tb.tb_lineno}")
+                _LOGGER.error(
+                    f"Failed to handle message, error: {ex}, Line: {exc_tb.tb_lineno}"
+                )
 
     def handle_notify_event_stream(self, params):
         try:
@@ -131,13 +138,15 @@ class DahuaVTOClient(asyncio.Protocol):
         except Exception as ex:
             exc_type, exc_obj, exc_tb = sys.exc_info()
 
-            _LOGGER.error(f"Failed to handle event, error: {ex}, Line: {exc_tb.tb_lineno}")
+            _LOGGER.error(
+                f"Failed to handle event, error: {ex}, Line: {exc_tb.tb_lineno}"
+            )
 
     def handle_default(self, message):
         _LOGGER.info(f"Data received without handler: {message}")
 
     def eof_received(self):
-        _LOGGER.info('Server sent EOF message')
+        _LOGGER.info("Server sent EOF message")
 
         if self._keep_alive_handle is not None:
             self._keep_alive_handle.cancel()
@@ -146,7 +155,7 @@ class DahuaVTOClient(asyncio.Protocol):
             self.disconnected.set_result(True)
 
     def connection_lost(self, exc):
-        _LOGGER.error('server closed the connection')
+        _LOGGER.error("server closed the connection")
 
         if self._keep_alive_handle is not None:
             self._keep_alive_handle.cancel()
@@ -165,7 +174,7 @@ class DahuaVTOClient(asyncio.Protocol):
             "session": self.sessionId,
             "magic": "0x1234",
             "method": action,
-            "params": params
+            "params": params,
         }
 
         self.data_handlers[self.request_id] = handler
@@ -215,7 +224,7 @@ class DahuaVTOClient(asyncio.Protocol):
             "ipAddr": "(null)",
             "loginType": "Direct",
             "userName": self.username,
-            "password": ""
+            "password": "",
         }
 
         self.send(DAHUA_GLOBAL_LOGIN, handle_pre_login, request_data)
@@ -238,9 +247,13 @@ class DahuaVTOClient(asyncio.Protocol):
                 self.load_device_type()
                 self.attach_event_manager()
 
-                self._keep_alive_handle = self._loop.call_later(self.keep_alive_interval, self.keep_alive)
+                self._keep_alive_handle = self._loop.call_later(
+                    self.keep_alive_interval, self.keep_alive
+                )
 
-        password = self._get_hashed_password(self.random, self.realm, self.username, self.password)
+        password = self._get_hashed_password(
+            self.random, self.realm, self.username, self.password
+        )
 
         request_data = {
             "clientType": "",
@@ -248,7 +261,7 @@ class DahuaVTOClient(asyncio.Protocol):
             "loginType": "Direct",
             "userName": self.username,
             "password": password,
-            "authorityType": "Default"
+            "authorityType": "Default",
         }
 
         self.send(DAHUA_GLOBAL_LOGIN, handle_login, request_data)
@@ -265,9 +278,7 @@ class DahuaVTOClient(asyncio.Protocol):
             if method == "client.notifyEventStream":
                 self.handle_notify_event_stream(params)
 
-        request_data = {
-            "codes": ['All']
-        }
+        request_data = {"codes": ["All"]}
 
         self.send(DAHUA_EVENT_MANAGER_ATTACH, handle_attach_event_manager, request_data)
 
@@ -283,16 +294,14 @@ class DahuaVTOClient(asyncio.Protocol):
 
             if table is not None:
                 for item in table:
-                    access_control = item.get('AccessProtocol')
+                    access_control = item.get("AccessProtocol")
 
-                    if access_control == 'Local':
-                        self.hold_time = item.get('UnlockReloadInterval')
+                    if access_control == "Local":
+                        self.hold_time = item.get("UnlockReloadInterval")
 
                         _LOGGER.info(f"Hold time: {self.hold_time}")
 
-        request_data = {
-            "name": "AccessControl"
-        }
+        request_data = {"name": "AccessControl"}
 
         self.send(DAHUA_CONFIG_MANAGER_GETCONFIG, handle_access_control, request_data)
 
@@ -355,9 +364,7 @@ class DahuaVTOClient(asyncio.Protocol):
 
             _LOGGER.info(f"Serial Number: {serial_number}")
 
-        request_data = {
-            "name": "T2UServer"
-        }
+        request_data = {"name": "T2UServer"}
 
         self.send(DAHUA_CONFIG_MANAGER_GETCONFIG, handle_serial_number, request_data)
 
@@ -365,20 +372,21 @@ class DahuaVTOClient(asyncio.Protocol):
         _LOGGER.debug("Keep alive")
 
         def handle_keep_alive(message):
-            self._keep_alive_handle = self._loop.call_later(self.keep_alive_interval, self.keep_alive)
+            self._keep_alive_handle = self._loop.call_later(
+                self.keep_alive_interval, self.keep_alive
+            )
             if message is None:
                 return
 
-            message_id = message.get('id')
+            message_id = message.get("id")
             if message_id is not None and message_id in self.data_handlers:
                 del self.data_handlers[message_id]
             else:
-                _LOGGER.warning(f'Could not delete keep alive handler with message ID {message_id}.')
+                _LOGGER.warning(
+                    f"Could not delete keep alive handler with message ID {message_id}."
+                )
 
-        request_data = {
-            "timeout": self.keep_alive_interval,
-            "action": True
-        }
+        request_data = {"timeout": self.keep_alive_interval, "action": True}
 
         self.send(DAHUA_GLOBAL_KEEPALIVE, handle_keep_alive, request_data)
 
@@ -402,7 +410,9 @@ class DahuaVTOClient(asyncio.Protocol):
             return result
         except Exception as e:
             exc_type, exc_obj, exc_tb = sys.exc_info()
-            _LOGGER.error(f"Failed to read data: {response}, error: {e}, Line: {exc_tb.tb_lineno}")
+            _LOGGER.error(
+                f"Failed to read data: {response}, error: {e}, Line: {exc_tb.tb_lineno}"
+            )
 
         return result
 
@@ -416,7 +426,7 @@ class DahuaVTOClient(asyncio.Protocol):
         """
         pos = 0
         while True:
-            match = text.find('{', pos)
+            match = text.find("{", pos)
             if match == -1:
                 break
             try:
@@ -429,11 +439,11 @@ class DahuaVTOClient(asyncio.Protocol):
     @staticmethod
     def _get_hashed_password(random, realm, username, password):
         password_str = f"{username}:{realm}:{password}"
-        password_bytes = password_str.encode('utf-8')
+        password_bytes = password_str.encode("utf-8")
         password_hash = hashlib.md5(password_bytes).hexdigest().upper()
 
         random_str = f"{username}:{random}:{password_hash}"
-        random_bytes = random_str.encode('utf-8')
+        random_bytes = random_str.encode("utf-8")
         random_hash = hashlib.md5(random_bytes).hexdigest().upper()
 
         return random_hash

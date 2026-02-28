@@ -1,6 +1,5 @@
 """Tests for coordinator properties, model detection, state getters, and event handling."""
 
-import time
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -636,7 +635,9 @@ class TestGetEventTimestamp:
 
 class TestAddDahuaEventListener:
     def test_registers_listener(self, mock_coordinator):
-        listener = lambda: None
+        def listener():
+            return None
+
         mock_coordinator.add_dahua_event_listener("VideoMotion", listener)
         assert mock_coordinator._dahua_event_listeners.get("VideoMotion-0") is listener
 

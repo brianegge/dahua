@@ -38,7 +38,7 @@ async def async_setup_entry(
         devices.append(
             DahuaDisarmingEventNotificationsLinkageBinarySwitch(coordinator, entry)
         )
-    except ClientError as exception:
+    except ClientError:
         pass
 
     async_add_devices(devices)

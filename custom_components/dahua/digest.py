@@ -1,4 +1,5 @@
 """Dahua Digest Auth Support"""
+
 import os
 import time
 import hashlib
@@ -19,7 +20,13 @@ class DigestAuth:
     https://github.com/requests/requests/blob/v2.18.4/requests/auth.py.
     """
 
-    def __init__(self, username: str, password: str, session: aiohttp.ClientSession, previous=None):
+    def __init__(
+        self,
+        username: str,
+        password: str,
+        session: aiohttp.ClientSession,
+        previous=None,
+    ):
         if previous is None:
             previous = {}
 

@@ -3,6 +3,7 @@ Button entity platform for Dahua.
 https://developers.home-assistant.io/docs/core/entity/button
 Buttons require HomeAssistant 2021.12 or greater
 """
+
 from homeassistant.core import HomeAssistant
 
 
