@@ -2,12 +2,12 @@
 
 from unittest.mock import patch
 
-import pytest
 from homeassistant import config_entries, data_entry_flow
 from homeassistant.core import HomeAssistant
-from homeassistant.loader import async_get_integration
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
+# Importing the config_flow module registers the flow handler with HA
+from custom_components.dahua import config_flow as _  # noqa: F401
 from custom_components.dahua.const import (
     CONF_ADDRESS,
     CONF_CHANNEL,
@@ -34,12 +34,6 @@ MOCK_DEVICE_DATA = {
     "name": "TestCamera",
     "serialNumber": "ABC123456",
 }
-
-
-@pytest.fixture(autouse=True)
-async def setup_integration(hass: HomeAssistant):
-    """Ensure the dahua integration is loaded before each test."""
-    await async_get_integration(hass, DOMAIN)
 
 
 async def test_user_flow_success(hass: HomeAssistant):
@@ -94,8 +88,6 @@ async def test_user_flow_invalid_credentials(hass: HomeAssistant):
 
 async def test_user_flow_duplicate_device(hass: HomeAssistant):
     """Test config flow aborts when the device is already configured."""
-    await async_get_integration(hass, DOMAIN)
-
     entry = MockConfigEntry(
         domain=DOMAIN,
         data=MOCK_USER_INPUT,
