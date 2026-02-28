@@ -69,8 +69,8 @@ async def async_setup_entry(
 class DahuaEventSensor(DahuaBaseEntity, BinarySensorEntity):
     """
     dahua binary_sensor class to record events. Many of these events are configured in the camera UI by going to:
-    Setting -> Event -> IVS -> and adding a tripwire rule, etc. See the DahuaEventThread in thread.py on how we connect
-    to the cammera to listen to events.
+    Setting -> Event -> IVS -> and adding a tripwire rule, etc. Events are received via async event streaming
+    in the coordinator.
     """
 
     def __init__(

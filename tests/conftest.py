@@ -143,7 +143,6 @@ def mock_coordinator(hass, mock_config_entry, mock_client):
     coordinator._dahua_event_listeners = {}
     coordinator._dahua_event_timestamp = {}
     coordinator._floodlight_mode = 2
-    coordinator._session = AsyncMock()
     coordinator.data = {}
     coordinator.logger = MagicMock()
     coordinator.name = DOMAIN

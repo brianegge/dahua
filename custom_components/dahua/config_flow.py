@@ -1,11 +1,8 @@
 """Adds config flow (UI flow) for Dahua IP cameras."""
 
 import logging
-import ssl
 
 import voluptuous as vol
-
-from aiohttp import ClientSession, TCPConnector
 
 from homeassistant import config_entries
 from homeassistant.core import callback
@@ -30,12 +27,6 @@ from .const import (
 https://developers.home-assistant.io/docs/config_entries_config_flow_handler
 https://developers.home-assistant.io/docs/data_entry_flow_index/
 """
-
-SSL_CONTEXT = ssl.create_default_context()
-# SSL_CONTEXT.minimum_version = ssl.TLSVersion.TLSv1_2
-SSL_CONTEXT.set_ciphers("DEFAULT")
-SSL_CONTEXT.check_hostname = False
-SSL_CONTEXT.verify_mode = ssl.CERT_NONE
 
 _LOGGER: logging.Logger = logging.getLogger(__package__)
 
@@ -301,9 +292,7 @@ class DahuaFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         self, username, password, address, port, rtsp_port, channel
     ):
         """Return name and serialNumber if credentials is valid."""
-        # Self signed certs are used over HTTPS so we'll disable SSL verification
-        connector = TCPConnector(enable_cleanup_closed=True, ssl=SSL_CONTEXT)
-        session = ClientSession(connector=connector)
+        session = async_create_clientsession(self.hass, verify_ssl=False)
         try:
             client = DahuaClient(username, password, address, port, rtsp_port, session)
             data = await client.get_machine_name()
@@ -317,8 +306,6 @@ class DahuaFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                 + "https://github.com/rroller/dahua/issues/6",
                 exc_info=exception,
             )
-        finally:
-            await session.close()
 
 
 class DahuaOptionsFlowHandler(config_entries.OptionsFlow):

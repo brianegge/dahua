@@ -5,7 +5,6 @@ Custom integration to integrate Dahua cameras with Home Assistant.
 import asyncio
 from typing import Any, Dict
 import logging
-import ssl
 import time
 
 from datetime import timedelta
@@ -13,14 +12,14 @@ from datetime import timedelta
 from homeassistant.components.tag import async_scan_tag
 import hashlib
 
-from aiohttp import ClientError, ClientResponseError, ClientSession, TCPConnector
+from aiohttp import ClientError, ClientResponseError
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import CALLBACK_TYPE, HomeAssistant
 
 type DahuaConfigEntry = ConfigEntry["DahuaDataUpdateCoordinator"]
 from homeassistant.exceptions import ConfigEntryNotReady, PlatformNotReady
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from homeassistant.helpers.aiohttp_client import async_create_clientsession
 from homeassistant.helpers.typing import ConfigType
 from homeassistant.const import EVENT_HOMEASSISTANT_STOP
 
@@ -44,11 +43,6 @@ from .vto import DahuaVTOClient
 
 SCAN_INTERVAL_SECONDS = timedelta(seconds=30)
 
-SSL_CONTEXT = ssl.create_default_context()
-SSL_CONTEXT.set_ciphers("DEFAULT")
-SSL_CONTEXT.check_hostname = False
-SSL_CONTEXT.verify_mode = ssl.CERT_NONE
-
 _LOGGER: logging.Logger = logging.getLogger(__package__)
 
 
@@ -63,6 +57,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: DahuaConfigEntry):
     name = entry.data.get(CONF_NAME)
     channel = entry.data.get(CONF_CHANNEL, 0)
 
+    session = async_create_clientsession(hass, verify_ssl=False)
+
     coordinator = DahuaDataUpdateCoordinator(
         hass,
         entry=entry,
@@ -74,6 +70,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: DahuaConfigEntry):
         password=password,
         name=name,
         channel=channel,
+        session=session,
     )
     await coordinator.async_config_entry_first_refresh()
 
@@ -113,15 +110,12 @@ class DahuaDataUpdateCoordinator(DataUpdateCoordinator):
         password: str,
         name: str,
         channel: int,
+        session=None,
     ) -> None:
         """Initialize the coordinator."""
-        # Self signed certs are used over HTTPS so we'll disable SSL verification
-        connector = TCPConnector(enable_cleanup_closed=True, ssl=SSL_CONTEXT)
-        self._session = ClientSession(connector=connector)
-
         # The client used to communicate with Dahua devices
         self.client: DahuaClient = DahuaClient(
-            username, password, address, port, rtsp_port, self._session
+            username, password, address, port, rtsp_port, session
         )
 
         self.config_entry = entry
@@ -256,16 +250,6 @@ class DahuaDataUpdateCoordinator(DataUpdateCoordinator):
         if self._vto_task is not None:
             self._vto_task.cancel()
             self._vto_task = None
-        await self._close_session()
-
-    async def _close_session(self) -> None:
-        _LOGGER.debug("Closing Session")
-        if self._session is not None:
-            try:
-                await self._session.close()
-                self._session = None
-            except Exception as e:
-                _LOGGER.exception("serverConnect - failed to close session")
 
     async def _async_update_data(self):
         """Reload the camera information"""

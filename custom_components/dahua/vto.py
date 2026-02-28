@@ -10,7 +10,6 @@ import asyncio
 import hashlib
 from json import JSONDecoder
 from typing import Optional, Callable
-from requests.auth import HTTPDigestAuth
 
 PROTOCOLS = {
     True: "https",
@@ -50,7 +49,6 @@ class DahuaVTOClient(asyncio.Protocol):
     base_url: str
     hold_time: int
     lock_status: {}
-    auth: HTTPDigestAuth
     data_handlers: {}
     buffer: bytearray
 
@@ -61,7 +59,6 @@ class DahuaVTOClient(asyncio.Protocol):
         self.password = password
         self.is_ssl = is_ssl
         self.base_url = f"{PROTOCOLS[self.is_ssl]}://{self.host}/cgi-bin/"
-        self.auth = HTTPDigestAuth(self.username, self.password)
         self.realm = None
         self.random = None
         self.request_id = 1

@@ -667,29 +667,6 @@ class TestAsyncStop:
         await mock_coordinator.async_stop()
 
 
-class TestCloseSession:
-    @pytest.mark.asyncio
-    async def test_closes_session(self, mock_coordinator):
-        mock_session = mock_coordinator._session
-        await mock_coordinator._close_session()
-        mock_session.close.assert_called_once()
-        assert mock_coordinator._session is None
-
-    @pytest.mark.asyncio
-    async def test_none_session(self, mock_coordinator):
-        mock_coordinator._session = None
-        await mock_coordinator._close_session()  # Should not raise
-
-    @pytest.mark.asyncio
-    async def test_close_session_exception(self, mock_coordinator):
-        """Exception during session close is caught (line 267-268)."""
-        from unittest.mock import AsyncMock
-
-        mock_coordinator._session = AsyncMock()
-        mock_coordinator._session.close.side_effect = Exception("close failed")
-        await mock_coordinator._close_session()  # Should not raise
-
-
 class TestOnReceiveExtended:
     def _make_event_data(self, event_str):
         """Format event string with boundary markers for parse_event."""
