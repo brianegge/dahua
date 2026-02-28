@@ -5,15 +5,13 @@ Requires HomeAssistant 2021.7.0 or greater
 """
 from homeassistant.core import HomeAssistant
 from homeassistant.components.select import SelectEntity
-from custom_components.dahua import DahuaDataUpdateCoordinator
-
-from .const import DOMAIN
+from custom_components.dahua import DahuaConfigEntry, DahuaDataUpdateCoordinator
 from .entity import DahuaBaseEntity
 
 
-async def async_setup_entry(hass: HomeAssistant, entry, async_add_devices):
+async def async_setup_entry(hass: HomeAssistant, entry: DahuaConfigEntry, async_add_devices):
     """Setup select platform."""
-    coordinator: DahuaDataUpdateCoordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator: DahuaDataUpdateCoordinator = entry.runtime_data
 
     devices = []
 
@@ -33,7 +31,7 @@ class DahuaDoorbellLightSelect(DahuaBaseEntity, SelectEntity):
         DahuaBaseEntity.__init__(self, coordinator, config_entry)
         SelectEntity.__init__(self)
         self._coordinator = coordinator
-        self._attr_name = f"{coordinator.get_device_name()} Security Light"
+        self._attr_name = "Security Light"
         self._attr_unique_id = f"{coordinator.get_serial_number()}_security_light"
         self._attr_options = ["Off", "On", "Strobe"]
 
@@ -71,7 +69,7 @@ class DahuaCameraPresetPositionSelect(DahuaBaseEntity, SelectEntity):
         DahuaBaseEntity.__init__(self, coordinator, config_entry)
         SelectEntity.__init__(self)
         self._coordinator = coordinator
-        self._attr_name = f"{coordinator.get_device_name()} Preset Position"
+        self._attr_name = "Preset Position"
         self._attr_unique_id = f"{coordinator.get_serial_number()}_preset_position"
         self._attr_options = ["Manual","1","2","3","4","5","6","7","8","9","10"]
 

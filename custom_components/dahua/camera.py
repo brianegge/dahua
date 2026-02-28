@@ -8,12 +8,8 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_platform
 from homeassistant.components.camera import Camera, CameraEntityFeature, StreamType
 
-from custom_components.dahua import DahuaDataUpdateCoordinator
+from custom_components.dahua import DahuaConfigEntry, DahuaDataUpdateCoordinator
 from custom_components.dahua.entity import DahuaBaseEntity
-
-from .const import (
-    DOMAIN,
-)
 
 _LOGGER: logging.Logger = logging.getLogger(__package__)
 
@@ -40,10 +36,10 @@ SERVICE_REBOOT = "reboot"
 SERVICE_GOTO_PRESET_POSITION = "goto_preset_position"
 
 
-async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entities):
+async def async_setup_entry(hass: HomeAssistant, config_entry: DahuaConfigEntry, async_add_entities):
     """Add a Dahua IP camera from a config entry."""
 
-    coordinator: DahuaDataUpdateCoordinator = hass.data[DOMAIN][config_entry.entry_id]
+    coordinator: DahuaDataUpdateCoordinator = config_entry.runtime_data
     max_streams = coordinator.get_max_streams()
 
     # Note the stream_index is 0 based. The main stream is index 0
@@ -244,7 +240,7 @@ class DahuaCamera(DahuaBaseEntity, Camera):
         name = coordinator.client.to_stream_name(stream_index)
         self._channel_number = coordinator.get_channel_number()
         self._coordinator = coordinator
-        self._name = "{0} {1}".format(config_entry.title, name)
+        self._name = name
         self._unique_id = coordinator.get_serial_number() + "_" + name
         self._stream_index = stream_index
         self._motion_status = False

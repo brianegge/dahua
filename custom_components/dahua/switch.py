@@ -2,16 +2,16 @@
 from aiohttp import ClientError
 from homeassistant.core import HomeAssistant
 from homeassistant.components.switch import SwitchEntity
-from custom_components.dahua import DahuaDataUpdateCoordinator
+from custom_components.dahua import DahuaConfigEntry, DahuaDataUpdateCoordinator
 
-from .const import DOMAIN, DISARMING_ICON, MOTION_DETECTION_ICON, SIREN_ICON, BELL_ICON
+from .const import DISARMING_ICON, MOTION_DETECTION_ICON, SIREN_ICON, BELL_ICON
 from .entity import DahuaBaseEntity
 from .client import SIREN_TYPE
 
 
-async def async_setup_entry(hass: HomeAssistant, entry, async_add_devices):
+async def async_setup_entry(hass: HomeAssistant, entry: DahuaConfigEntry, async_add_devices):
     """Setup sensor platform."""
-    coordinator: DahuaDataUpdateCoordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator: DahuaDataUpdateCoordinator = entry.runtime_data
 
     # I think most cameras have a motion sensor so we'll blindly add a switch for it
     devices = [
@@ -52,7 +52,7 @@ class DahuaMotionDetectionBinarySwitch(DahuaBaseEntity, SwitchEntity):
     @property
     def name(self):
         """Return the name of the switch."""
-        return self._coordinator.get_device_name() + " " + "Motion Detection"
+        return "Motion Detection"
 
     @property
     def unique_id(self):
@@ -94,7 +94,7 @@ class DahuaDisarmingLinkageBinarySwitch(DahuaBaseEntity, SwitchEntity):
     @property
     def name(self):
         """Return the name of the switch."""
-        return self._coordinator.get_device_name() + " " + "Disarming"
+        return "Disarming"
 
     @property
     def unique_id(self):
@@ -136,7 +136,7 @@ class DahuaDisarmingEventNotificationsLinkageBinarySwitch(DahuaBaseEntity, Switc
     @property
     def name(self):
         """Return the name of the switch."""
-        return self._coordinator.get_device_name() + " " + "Event Notifications"
+        return "Event Notifications"
 
     @property
     def unique_id(self):
@@ -181,7 +181,7 @@ class DahuaSmartMotionDetectionBinarySwitch(DahuaBaseEntity, SwitchEntity):
     @property
     def name(self):
         """Return the name of the switch."""
-        return self._coordinator.get_device_name() + " " + "Smart Motion Detection"
+        return "Smart Motion Detection"
 
     @property
     def unique_id(self):
@@ -221,7 +221,7 @@ class DahuaSirenBinarySwitch(DahuaBaseEntity, SwitchEntity):
     @property
     def name(self):
         """Return the name of the switch."""
-        return self._coordinator.get_device_name() + " Siren"
+        return "Siren"
 
     @property
     def unique_id(self):

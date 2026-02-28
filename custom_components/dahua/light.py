@@ -10,15 +10,15 @@ from homeassistant.components.light import (
     LightEntity, LightEntityFeature, ColorMode,
 )
 
-from . import DahuaDataUpdateCoordinator, dahua_utils
-from .const import DOMAIN, SECURITY_LIGHT_ICON, INFRARED_ICON
+from . import DahuaConfigEntry, DahuaDataUpdateCoordinator, dahua_utils
+from .const import SECURITY_LIGHT_ICON, INFRARED_ICON
 from .entity import DahuaBaseEntity
 from .client import SECURITY_LIGHT_TYPE
 
 
-async def async_setup_entry(hass: HomeAssistant, entry, async_add_entities):
+async def async_setup_entry(hass: HomeAssistant, entry: DahuaConfigEntry, async_add_entities):
     """Setup light platform."""
-    coordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator = entry.runtime_data
 
     entities = []
     if coordinator.supports_infrared_light():
@@ -51,7 +51,7 @@ class DahuaInfraredLight(DahuaBaseEntity, LightEntity):
     @property
     def name(self):
         """Return the name of the light."""
-        return self._coordinator.get_device_name() + " " + self._name
+        return self._name
 
     @property
     def unique_id(self):
@@ -124,7 +124,7 @@ class DahuaIlluminator(DahuaBaseEntity, LightEntity):
     @property
     def name(self):
         """Return the name of the light."""
-        return self._coordinator.get_device_name() + " " + self._name
+        return self._name
 
     @property
     def unique_id(self):
@@ -190,7 +190,7 @@ class AmcrestRingLight(DahuaBaseEntity, LightEntity):
     @property
     def name(self):
         """Return the name of the light."""
-        return self._coordinator.get_device_name() + " " + self._name
+        return self._name
 
     @property
     def unique_id(self):
@@ -242,7 +242,7 @@ class FloodLight(DahuaBaseEntity, LightEntity):
     @property
     def name(self):
         """Return the name of the light."""
-        return self._coordinator.get_device_name() + " " + self._name
+        return self._name
 
     @property
     def unique_id(self):
@@ -319,7 +319,7 @@ class DahuaSecurityLight(DahuaBaseEntity, LightEntity):
     @property
     def name(self):
         """Return the name of the light."""
-        return self._coordinator.get_device_name() + " " + self._name
+        return self._name
 
     @property
     def unique_id(self):

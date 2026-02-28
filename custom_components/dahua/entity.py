@@ -11,6 +11,8 @@ class DahuaBaseEntity(CoordinatorEntity):
     DahuaBaseEntity is the base entity for all Dahua entities
     """
 
+    _attr_has_entity_name = True
+
     def __init__(self, coordinator: DahuaDataUpdateCoordinator, config_entry):
         super().__init__(coordinator)
         self.config_entry = config_entry

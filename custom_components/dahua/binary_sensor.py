@@ -3,11 +3,11 @@ import re
 
 from homeassistant.components.binary_sensor import BinarySensorEntity
 from homeassistant.core import HomeAssistant
-from custom_components.dahua import DahuaDataUpdateCoordinator
+from custom_components.dahua import DahuaConfigEntry, DahuaDataUpdateCoordinator
 
 from .const import (
     MOTION_SENSOR_DEVICE_CLASS,
-    DOMAIN, SAFETY_DEVICE_CLASS, CONNECTIVITY_DEVICE_CLASS, SOUND_DEVICE_CLASS, DOOR_DEVICE_CLASS, VOLUME_HIGH_ICON,
+    SAFETY_DEVICE_CLASS, CONNECTIVITY_DEVICE_CLASS, SOUND_DEVICE_CLASS, DOOR_DEVICE_CLASS, VOLUME_HIGH_ICON,
 )
 from .entity import DahuaBaseEntity
 
@@ -41,9 +41,9 @@ ICON_OVERRIDES = {
 }
 
 
-async def async_setup_entry(hass: HomeAssistant, entry, async_add_devices):
+async def async_setup_entry(hass: HomeAssistant, entry: DahuaConfigEntry, async_add_devices):
     """Setup binary_sensor platform."""
-    coordinator: DahuaDataUpdateCoordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator: DahuaDataUpdateCoordinator = entry.runtime_data
 
     sensors: list[DahuaEventSensor] = []
     for event_name in coordinator.get_event_list():
@@ -100,8 +100,8 @@ class DahuaEventSensor(DahuaBaseEntity, BinarySensorEntity):
 
     @property
     def name(self):
-        """Return the name of the binary_sensor. Example: Cam14 Motion Alarm"""
-        return f"{self._device_name} {self._name}"
+        """Return the name of the binary_sensor. Example: Motion Alarm"""
+        return self._name
 
     @property
     def device_class(self):

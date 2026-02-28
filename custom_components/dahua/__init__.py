@@ -15,6 +15,8 @@ import hashlib
 from aiohttp import ClientError, ClientResponseError, ClientSession, TCPConnector
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import CALLBACK_TYPE, HomeAssistant
+
+type DahuaConfigEntry = ConfigEntry["DahuaDataUpdateCoordinator"]
 from homeassistant.exceptions import ConfigEntryNotReady, PlatformNotReady
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
@@ -34,7 +36,6 @@ from .const import (
     DOMAIN,
     PLATFORMS,
     CONF_RTSP_PORT,
-    STARTUP_MESSAGE,
     CONF_CHANNEL,
 )
 from .dahua_utils import parse_event
@@ -49,12 +50,8 @@ SSL_CONTEXT.verify_mode = ssl.CERT_NONE
 
 _LOGGER: logging.Logger = logging.getLogger(__package__)
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
+async def async_setup_entry(hass: HomeAssistant, entry: DahuaConfigEntry):
     """Set up this integration using UI."""
-    if hass.data.get(DOMAIN) is None:
-        hass.data.setdefault(DOMAIN, {})
-        _LOGGER.info(STARTUP_MESSAGE)
-
     username = entry.data.get(CONF_USERNAME)
     password = entry.data.get(CONF_PASSWORD)
     address = entry.data.get(CONF_ADDRESS)
@@ -73,7 +70,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
         _LOGGER.warning("dahua async_setup_entry for init, data not ready")
         raise ConfigEntryNotReady
 
-    hass.data[DOMAIN][entry.entry_id] = coordinator
+    entry.runtime_data = coordinator
 
     # https://developers.home-assistant.io/docs/config_entries_index/
     for platform in PLATFORMS:
@@ -817,9 +814,9 @@ class DahuaDataUpdateCoordinator(DataUpdateCoordinator):
         return self._vto_client
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(hass: HomeAssistant, entry: DahuaConfigEntry) -> bool:
     """Handle removal of an entry."""
-    coordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator = entry.runtime_data
     await coordinator.async_stop()
     unloaded = all(
         await asyncio.gather(
@@ -830,13 +827,11 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             ]
         )
     )
-    if unloaded:
-        hass.data[DOMAIN].pop(entry.entry_id)
 
     return unloaded
 
 
-async def async_reload_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
+async def async_reload_entry(hass: HomeAssistant, entry: DahuaConfigEntry) -> None:
     """Reload config entry."""
     await async_unload_entry(hass, entry)
     await async_setup_entry(hass, entry)
