@@ -98,7 +98,7 @@ class DahuaSpeaker(DahuaBaseEntity, MediaPlayerEntity):
         self.async_write_ha_state()
         try:
             g711a_data = await _fetch_and_convert_audio(self.hass, media_id)
-            channel = self._coordinator.get_channel()
+            channel = self._coordinator.get_channel_number()
             await self._coordinator.client.async_post_audio(g711a_data, channel)
         finally:
             self._attr_state = MediaPlayerState.IDLE

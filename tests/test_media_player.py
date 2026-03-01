@@ -107,7 +107,7 @@ class TestDahuaSpeaker:
 
             mock_fetch.assert_called_once_with(hass, "http://example.com/audio.wav")
             mock_coordinator.client.async_post_audio.assert_called_once_with(
-                fake_g711a, 0
+                fake_g711a, 1
             )
 
         # State should be back to IDLE

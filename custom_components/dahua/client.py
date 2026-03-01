@@ -902,22 +902,57 @@ class DahuaClient:
 
         URL: /cgi-bin/audio.cgi?action=postAudio&httptype=singlepart&channel={channel}
         Content-Type: Audio/{encoding}
+
+        The camera's audio endpoint is a streaming interface: it accepts the
+        POST body, plays the audio, then holds the connection open for more
+        data without ever sending HTTP response headers.  We therefore:
+        1. Prime digest auth with a GET (the camera resets unauthenticated POSTs).
+        2. POST with pre-computed auth.
+        3. Use a short response timeout — TimeoutError means the data was
+           accepted (no reset/error), so we treat it as success.
         """
         url = (
             "{0}/cgi-bin/audio.cgi?action=postAudio&httptype=singlepart&channel={1}"
         ).format(self._base, channel)
         headers = {"Content-Type": "Audio/{0}".format(encoding)}
-        async with async_timeout.timeout(60):
-            response = None
-            try:
-                auth = DigestAuth(self._username, self._password, self._session)
+
+        # Prime digest auth with a lightweight GET so the POST is
+        # authenticated on first attempt (camera drops un-authed POSTs).
+        prime_auth = DigestAuth(self._username, self._password, self._session)
+        async with async_timeout.timeout(TIMEOUT_SECONDS):
+            prime_resp = await prime_auth.request(
+                "GET", self._base + "/cgi-bin/magicBox.cgi?action=getMachineName"
+            )
+            prime_resp.close()
+
+        auth = DigestAuth(
+            self._username,
+            self._password,
+            self._session,
+            {
+                "last_nonce": prime_auth.last_nonce,
+                "nonce_count": prime_auth.nonce_count,
+                "challenge": prime_auth.challenge,
+            },
+        )
+
+        response = None
+        try:
+            # The camera never sends response headers for this streaming
+            # endpoint, so we use a short timeout.  A TimeoutError after
+            # sending means the camera accepted the audio (no connection
+            # reset).  A real error (401, connection refused, etc.) surfaces
+            # before the timeout.
+            async with async_timeout.timeout(2):
                 response = await auth.request(
                     "POST", url, headers=headers, data=audio_data
                 )
-                response.raise_for_status()
-            finally:
-                if response is not None:
-                    response.close()
+        except asyncio.TimeoutError:
+            # Expected: camera accepted data and is holding connection open
+            pass
+        finally:
+            if response is not None:
+                response.close()
 
     async def get_bytes(self, url: str) -> bytes:
         """Get information from the API. This will return the raw response and not process it"""
