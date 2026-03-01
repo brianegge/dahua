@@ -11,7 +11,7 @@ from homeassistant.components.media_player import (
 
 from custom_components.dahua.media_player import (
     DahuaSpeaker,
-    _convert_to_g711a,
+    _convert_to_aac,
     _fetch_and_convert_audio,
     async_setup_entry,
 )
@@ -98,16 +98,16 @@ class TestDahuaSpeaker:
         speaker.hass = hass
         speaker.async_write_ha_state = MagicMock()
 
-        fake_g711a = b"\x00\x01\x02"
+        fake_aac = b"\x00\x01\x02"
         with patch(
             "custom_components.dahua.media_player._fetch_and_convert_audio",
-            return_value=fake_g711a,
+            return_value=(fake_aac, 5.0),
         ) as mock_fetch:
             await speaker.async_play_media("music", "http://example.com/audio.wav")
 
             mock_fetch.assert_called_once_with(hass, "http://example.com/audio.wav")
             mock_coordinator.client.async_post_audio.assert_called_once_with(
-                fake_g711a, 1
+                fake_aac, 1, encoding="AAC", duration=5.0
             )
 
         # State should be back to IDLE
@@ -127,7 +127,7 @@ class TestDahuaSpeaker:
 
         with patch(
             "custom_components.dahua.media_player._fetch_and_convert_audio",
-            return_value=b"\x00",
+            return_value=(b"\x00", 1.0),
         ):
             await speaker.async_play_media("music", "http://example.com/audio.wav")
 
@@ -167,14 +167,14 @@ class TestFetchAndConvertAudio:
         mock_session = MagicMock()
         mock_session.get = MagicMock(return_value=mock_response)
 
-        converted = b"\xd5\xd5"
+        converted = (b"\xd5\xd5", 5.0)
         with (
             patch(
                 "custom_components.dahua.media_player.async_get_clientsession",
                 return_value=mock_session,
             ),
             patch(
-                "custom_components.dahua.media_player._convert_to_g711a",
+                "custom_components.dahua.media_player._convert_to_aac",
                 return_value=converted,
             ),
         ):
@@ -184,37 +184,43 @@ class TestFetchAndConvertAudio:
         mock_session.get.assert_called_once_with("http://example.com/tts.wav")
 
 
-class TestConvertToG711a:
+class TestConvertToAac:
     def test_ffmpeg_called_with_correct_args(self):
         """ffmpeg is invoked with correct arguments."""
         fake_output = b"\xd5\xd5\xd5"
         mock_result = MagicMock()
         mock_result.returncode = 0
         mock_result.stdout = fake_output
+        mock_result.stderr = b"Duration: 00:00:05.12, start"
 
         with patch(
             "custom_components.dahua.media_player.subprocess.run",
             return_value=mock_result,
         ) as mock_run:
-            result = _convert_to_g711a(b"\x00\x01\x02")
+            data, duration = _convert_to_aac(b"\x00\x01\x02")
 
             mock_run.assert_called_once_with(
                 [
                     "ffmpeg",
                     "-i",
                     "pipe:0",
-                    "-f",
-                    "alaw",
+                    "-c:a",
+                    "aac",
+                    "-b:a",
+                    "64k",
                     "-ar",
                     "8000",
                     "-ac",
                     "1",
+                    "-f",
+                    "adts",
                     "pipe:1",
                 ],
                 input=b"\x00\x01\x02",
                 capture_output=True,
             )
-            assert result == fake_output
+            assert data == fake_output
+            assert duration == 5.12
 
     def test_ffmpeg_failure_raises_runtime_error(self):
         """Failed ffmpeg raises RuntimeError."""
@@ -229,4 +235,18 @@ class TestConvertToG711a:
             ),
             pytest.raises(RuntimeError, match="ffmpeg failed"),
         ):
-            _convert_to_g711a(b"\x00\x01\x02")
+            _convert_to_aac(b"\x00\x01\x02")
+
+    def test_zero_duration_when_not_found(self):
+        """Duration defaults to 0 when not in ffmpeg output."""
+        mock_result = MagicMock()
+        mock_result.returncode = 0
+        mock_result.stdout = b"\xd5"
+        mock_result.stderr = b"no duration here"
+
+        with patch(
+            "custom_components.dahua.media_player.subprocess.run",
+            return_value=mock_result,
+        ):
+            _, duration = _convert_to_aac(b"\x00")
+            assert duration == 0.0

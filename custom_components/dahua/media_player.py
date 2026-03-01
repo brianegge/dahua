@@ -37,19 +37,26 @@ async def async_setup_entry(
         async_add_entities([DahuaSpeaker(coordinator, entry)])
 
 
-def _convert_to_g711a(audio_data: bytes) -> bytes:
-    """Convert audio bytes to G.711A (a-law, 8kHz, mono) using ffmpeg."""
+def _convert_to_aac(audio_data: bytes) -> tuple[bytes, float]:
+    """Convert audio bytes to AAC (8 kHz, mono, ADTS) using ffmpeg.
+
+    Returns a tuple of (aac_bytes, duration_seconds).
+    """
     result = subprocess.run(
         [
             "ffmpeg",
             "-i",
             "pipe:0",
-            "-f",
-            "alaw",
+            "-c:a",
+            "aac",
+            "-b:a",
+            "64k",
             "-ar",
             "8000",
             "-ac",
             "1",
+            "-f",
+            "adts",
             "pipe:1",
         ],
         input=audio_data,
@@ -61,17 +68,33 @@ def _convert_to_g711a(audio_data: bytes) -> bytes:
                 result.returncode, result.stderr.decode(errors="replace")
             )
         )
-    return result.stdout
+    # Parse duration from ffmpeg stderr (e.g. "Duration: 00:00:05.12")
+    duration = 0.0
+    for line in result.stderr.decode(errors="replace").splitlines():
+        if "Duration:" in line:
+            import re
+
+            match = re.search(r"Duration:\s*(\d+):(\d+):(\d+)\.(\d+)", line)
+            if match:
+                h, m, s, cs = (int(g) for g in match.groups())
+                duration = h * 3600 + m * 60 + s + cs / 100.0
+                break
+    return result.stdout, duration
 
 
-async def _fetch_and_convert_audio(hass: HomeAssistant, url: str) -> bytes:
-    """Fetch audio from URL and convert to G.711A format."""
+async def _fetch_and_convert_audio(
+    hass: HomeAssistant, url: str
+) -> tuple[bytes, float]:
+    """Fetch audio from URL and convert to AAC format.
+
+    Returns a tuple of (aac_bytes, duration_seconds).
+    """
     session = async_get_clientsession(hass)
     async with session.get(url) as response:
         response.raise_for_status()
         audio_data = await response.read()
 
-    return await hass.async_add_executor_job(_convert_to_g711a, audio_data)
+    return await hass.async_add_executor_job(_convert_to_aac, audio_data)
 
 
 class DahuaSpeaker(DahuaBaseEntity, MediaPlayerEntity):
@@ -97,9 +120,11 @@ class DahuaSpeaker(DahuaBaseEntity, MediaPlayerEntity):
         self._attr_state = MediaPlayerState.PLAYING
         self.async_write_ha_state()
         try:
-            g711a_data = await _fetch_and_convert_audio(self.hass, media_id)
+            aac_data, duration = await _fetch_and_convert_audio(self.hass, media_id)
             channel = self._coordinator.get_channel_number()
-            await self._coordinator.client.async_post_audio(g711a_data, channel)
+            await self._coordinator.client.async_post_audio(
+                aac_data, channel, encoding="AAC", duration=duration
+            )
         finally:
             self._attr_state = MediaPlayerState.IDLE
             self.async_write_ha_state()

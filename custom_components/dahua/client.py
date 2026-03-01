@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 import socket
 import asyncio
-from collections.abc import Callable
+from collections.abc import AsyncIterator, Callable
 from typing import Any
 
 import aiohttp
@@ -896,20 +896,23 @@ class DahuaClient:
         return data_dict
 
     async def async_post_audio(
-        self, audio_data: bytes, channel: int, encoding: str = "G.711A"
+        self,
+        audio_data: bytes,
+        channel: int,
+        encoding: str = "G.711A",
+        duration: float = 0,
     ) -> None:
         """POST raw audio bytes to the camera's speaker.
 
-        URL: /cgi-bin/audio.cgi?action=postAudio&httptype=singlepart&channel={channel}
-        Content-Type: Audio/{encoding}
+        Audio is streamed at approximately real-time rate using wall-clock
+        timing so the camera can play it without buffer underruns.  Some
+        models respond with ``200 OK`` after playback; others hold the
+        connection open as a streaming endpoint.  Both are handled.
 
-        The camera's audio endpoint is a streaming interface: it accepts the
-        POST body, plays the audio, then holds the connection open for more
-        data without ever sending HTTP response headers.  We therefore:
-        1. Prime digest auth with a GET (the camera resets unauthenticated POSTs).
-        2. POST with pre-computed auth.
-        3. Use a short response timeout — TimeoutError means the data was
-           accepted (no reset/error), so we treat it as success.
+        1. Prime digest auth with a GET (the camera resets unauthenticated
+           POSTs).
+        2. POST with pre-computed auth, streaming data at real-time rate.
+        3. Treat a timeout after all data is sent as success (streaming mode).
         """
         url = (
             "{0}/cgi-bin/audio.cgi?action=postAudio&httptype=singlepart&channel={1}"
@@ -936,19 +939,40 @@ class DahuaClient:
             },
         )
 
+        if duration <= 0:
+            # Estimate from raw G.711A at 8 kHz; for compressed formats
+            # callers should pass the real duration.
+            duration = len(audio_data) / 8000.0
+
+        bytes_per_sec = len(audio_data) / duration if duration > 0 else len(audio_data)
+        # ~0.5 s worth of data per chunk, wall-clock paced
+        chunk_size = max(1, int(bytes_per_sec * 0.5))
+        chunk_interval = 0.5
+
+        async def _stream() -> AsyncIterator[bytes]:
+            import time
+
+            start = time.monotonic()
+            chunk_num = 0
+            offset = 0
+            while offset < len(audio_data):
+                yield audio_data[offset : offset + chunk_size]
+                offset += chunk_size
+                chunk_num += 1
+                if offset < len(audio_data):
+                    target = start + chunk_num * chunk_interval
+                    delay = target - time.monotonic()
+                    if delay > 0:
+                        await asyncio.sleep(delay)
+
         response = None
         try:
-            # The camera never sends response headers for this streaming
-            # endpoint, so we use a short timeout.  A TimeoutError after
-            # sending means the camera accepted the audio (no connection
-            # reset).  A real error (401, connection refused, etc.) surfaces
-            # before the timeout.
-            async with async_timeout.timeout(2):
+            async with async_timeout.timeout(duration + 10):
                 response = await auth.request(
-                    "POST", url, headers=headers, data=audio_data
+                    "POST", url, headers=headers, data=_stream()
                 )
         except asyncio.TimeoutError:
-            # Expected: camera accepted data and is holding connection open
+            # Expected for cameras that treat this as a streaming endpoint
             pass
         finally:
             if response is not None:
