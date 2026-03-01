@@ -895,6 +895,30 @@ class DahuaClient:
                 data_dict[parts[0]] = line
         return data_dict
 
+    async def async_post_audio(
+        self, audio_data: bytes, channel: int, encoding: str = "G.711A"
+    ) -> None:
+        """POST raw audio bytes to the camera's speaker.
+
+        URL: /cgi-bin/audio.cgi?action=postAudio&httptype=singlepart&channel={channel}
+        Content-Type: Audio/{encoding}
+        """
+        url = (
+            "{0}/cgi-bin/audio.cgi?action=postAudio&httptype=singlepart&channel={1}"
+        ).format(self._base, channel)
+        headers = {"Content-Type": "Audio/{0}".format(encoding)}
+        async with async_timeout.timeout(60):
+            response = None
+            try:
+                auth = DigestAuth(self._username, self._password, self._session)
+                response = await auth.request(
+                    "POST", url, headers=headers, data=audio_data
+                )
+                response.raise_for_status()
+            finally:
+                if response is not None:
+                    response.close()
+
     async def get_bytes(self, url: str) -> bytes:
         """Get information from the API. This will return the raw response and not process it"""
         async with async_timeout.timeout(TIMEOUT_SECONDS):
