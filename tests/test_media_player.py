@@ -9,6 +9,7 @@ from homeassistant.components.media_player import (
     MediaPlayerState,
 )
 
+from custom_components.dahua.client import _parse_adts_frames
 from custom_components.dahua.media_player import (
     DahuaSpeaker,
     _convert_to_aac,
@@ -250,3 +251,48 @@ class TestConvertToAac:
         ):
             _, duration = _convert_to_aac(b"\x00")
             assert duration == 0.0
+
+
+class TestParseAdtsFrames:
+    def _make_frame(self, payload_size: int) -> bytes:
+        """Build a minimal ADTS frame with given payload size."""
+        # ADTS header is 7 bytes, total frame length = 7 + payload_size
+        frame_length = 7 + payload_size
+        header = bytearray(7)
+        header[0] = 0xFF
+        header[1] = 0xF1  # sync + MPEG-4, Layer 0, no CRC
+        header[2] = 0x50  # AAC-LC, 44100 Hz (index 4), private=0
+        # byte 3: channel config (bits 7-6) + frame_length high bits (1-0)
+        header[3] = 0x80 | ((frame_length >> 11) & 0x03)
+        header[4] = (frame_length >> 3) & 0xFF
+        header[5] = ((frame_length & 0x07) << 5) | 0x1F
+        header[6] = 0xFC  # buffer fullness + 0 raw data blocks
+        return bytes(header) + b"\x00" * payload_size
+
+    def test_parses_multiple_frames(self):
+        """Multiple ADTS frames are parsed correctly."""
+        f1 = self._make_frame(100)
+        f2 = self._make_frame(200)
+        data = f1 + f2
+        frames = _parse_adts_frames(data)
+        assert len(frames) == 2
+        assert frames[0] == f1
+        assert frames[1] == f2
+
+    def test_empty_data(self):
+        """Empty input returns no frames."""
+        assert _parse_adts_frames(b"") == []
+
+    def test_skips_non_sync_bytes(self):
+        """Garbage bytes before a valid frame are skipped."""
+        garbage = b"\x00\x01\x02"
+        frame = self._make_frame(50)
+        frames = _parse_adts_frames(garbage + frame)
+        assert len(frames) == 1
+        assert frames[0] == frame
+
+    def test_truncated_frame_ignored(self):
+        """A frame whose declared length exceeds available data is ignored."""
+        frame = self._make_frame(100)
+        truncated = frame[:50]  # cut short
+        assert _parse_adts_frames(truncated) == []

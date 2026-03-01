@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import socket
 import asyncio
+import time
 from collections.abc import AsyncIterator, Callable
 from typing import Any
 
@@ -20,6 +21,29 @@ _LOGGER: logging.Logger = logging.getLogger(__package__)
 TIMEOUT_SECONDS = 20
 SECURITY_LIGHT_TYPE = 1
 SIREN_TYPE = 2
+
+
+_MULTIPART_BOUNDARY = "dahua-audio"
+
+
+def _parse_adts_frames(data: bytes) -> list[bytes]:
+    """Parse ADTS-framed AAC data into individual frames."""
+    frames: list[bytes] = []
+    offset = 0
+    while offset < len(data) - 7:
+        if data[offset] != 0xFF or (data[offset + 1] & 0xF0) != 0xF0:
+            offset += 1
+            continue
+        frame_length = (
+            ((data[offset + 3] & 0x03) << 11)
+            | (data[offset + 4] << 3)
+            | ((data[offset + 5] >> 5) & 0x07)
+        )
+        if frame_length < 7 or offset + frame_length > len(data):
+            break
+        frames.append(data[offset : offset + frame_length])
+        offset += frame_length
+    return frames
 
 
 class DahuaClient:
@@ -902,22 +926,26 @@ class DahuaClient:
         encoding: str = "G.711A",
         duration: float = 0,
     ) -> None:
-        """POST raw audio bytes to the camera's speaker.
+        """POST audio to the camera speaker via multipart MIME streaming.
 
-        Audio is streamed at approximately real-time rate using wall-clock
-        timing so the camera can play it without buffer underruns.  Some
-        models respond with ``200 OK`` after playback; others hold the
-        connection open as a streaming endpoint.  Both are handled.
+        Uses ``httptype=multipart`` with each ADTS frame sent as a separate
+        MIME part.  This gives the camera explicit frame boundaries so its
+        decoder always receives complete, decodable units.  Parts are paced
+        at the AAC frame rate (128 ms for 8 kHz) to keep the playback buffer
+        fed without overrun.
 
-        1. Prime digest auth with a GET (the camera resets unauthenticated
-           POSTs).
-        2. POST with pre-computed auth, streaming data at real-time rate.
-        3. Treat a timeout after all data is sent as success (streaming mode).
+        For non-AAC encodings, falls back to a single MIME part.
         """
+        boundary = _MULTIPART_BOUNDARY
         url = (
-            "{0}/cgi-bin/audio.cgi?action=postAudio&httptype=singlepart&channel={1}"
+            "{0}/cgi-bin/audio.cgi?action=postAudio&httptype=multipart&channel={1}"
         ).format(self._base, channel)
-        headers = {"Content-Type": "Audio/{0}".format(encoding)}
+        headers = {
+            "Content-Type": (
+                "multipart/x-mixed-replace; boundary={0}".format(boundary)
+            ),
+        }
+        content_type = "Audio/{0}".format(encoding)
 
         # Prime digest auth with a lightweight GET so the POST is
         # authenticated on first attempt (camera drops un-authed POSTs).
@@ -940,30 +968,37 @@ class DahuaClient:
         )
 
         if duration <= 0:
-            # Estimate from raw G.711A at 8 kHz; for compressed formats
-            # callers should pass the real duration.
             duration = len(audio_data) / 8000.0
 
-        bytes_per_sec = len(audio_data) / duration if duration > 0 else len(audio_data)
-        # ~0.5 s worth of data per chunk, wall-clock paced
-        chunk_size = max(1, int(bytes_per_sec * 0.5))
-        chunk_interval = 0.5
+        # Parse ADTS frames for frame-aligned delivery; fall back to
+        # a single part for non-AAC encodings.
+        frames = _parse_adts_frames(audio_data) if encoding == "AAC" else []
+        if not frames:
+            frames = [audio_data]
+        frame_interval = duration / len(frames) if len(frames) > 1 else duration
 
         async def _stream() -> AsyncIterator[bytes]:
-            import time
-
             start = time.monotonic()
-            chunk_num = 0
-            offset = 0
-            while offset < len(audio_data):
-                yield audio_data[offset : offset + chunk_size]
-                offset += chunk_size
-                chunk_num += 1
-                if offset < len(audio_data):
-                    target = start + chunk_num * chunk_interval
+            for i, frame in enumerate(frames):
+                part = (
+                    (
+                        "--{boundary}\r\n"
+                        "Content-Type: {ct}\r\n"
+                        "Content-Length: {length}\r\n"
+                        "\r\n"
+                    )
+                    .format(boundary=boundary, ct=content_type, length=len(frame))
+                    .encode()
+                    + frame
+                    + b"\r\n"
+                )
+                yield part
+                if i < len(frames) - 1:
+                    target = start + (i + 1) * frame_interval
                     delay = target - time.monotonic()
                     if delay > 0:
                         await asyncio.sleep(delay)
+            yield "--{0}--\r\n".format(boundary).encode()
 
         response = None
         try:
