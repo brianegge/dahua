@@ -3,7 +3,8 @@
   "name": "Dahua",
   "after_dependencies": [
     "tag",
-    "number"
+    "number",
+    "media_player"
   ],
   "codeowners": [
     "@brianegge"
