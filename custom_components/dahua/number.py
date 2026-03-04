@@ -1,7 +1,7 @@
 """NUmber platform for dahua."""
 
 from homeassistant.core import HomeAssistant
-from homeassistant.components.Number import NumberEntity
+from homeassistant.components.number import NumberEntity
 from homeassistant.helpers import entity_platform
 from custom_components.dahua import DahuaDataUpdateCoordinator
 
