@@ -35,7 +35,8 @@ LIGHT = "light"
 CAMERA = "camera"
 SELECT = "select"
 NUMBER = "number"
-PLATFORMS = [BINARY_SENSOR, SWITCH, LIGHT, CAMERA, SELECT,NUMBER]
+MEDIA_PLAYER = "media_player"
+PLATFORMS = [BINARY_SENSOR, SWITCH, LIGHT, CAMERA, SELECT, NUMBER, MEDIA_PLAYER]
 
 
 # Configuration and options
