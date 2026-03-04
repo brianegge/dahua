@@ -9,7 +9,7 @@ import socket
 import asyncio
 import struct
 import time
-from collections.abc import AsyncIterator, Callable
+from collections.abc import Callable
 from typing import Any
 
 import aiohttp
@@ -1003,9 +1003,7 @@ class DahuaClient:
         response = None
         try:
             async with async_timeout.timeout(duration + 10):
-                response = await auth.request(
-                    "POST", url, headers=headers, data=body
-                )
+                response = await auth.request("POST", url, headers=headers, data=body)
         except asyncio.TimeoutError:
             # Expected for cameras that treat this as a streaming endpoint
             pass
@@ -1045,7 +1043,6 @@ class DahuaClient:
         )
         uri_path = "/cam/realmonitor?channel={}&subtype=0".format(channel + 1)
 
-        loop = asyncio.get_running_loop()
         reader: asyncio.StreamReader
         writer: asyncio.StreamWriter
         reader, writer = await asyncio.wait_for(
@@ -1090,7 +1087,8 @@ class DahuaClient:
         try:
             # --- DESCRIBE (unauthenticated to get digest challenge) ---
             resp = await _rtsp_send(
-                "DESCRIBE", rtsp_url,
+                "DESCRIBE",
+                rtsp_url,
                 "Accept: application/sdp\r\n"
                 "Require: www.onvif.org/ver20/backchannel\r\n",
             )
@@ -1104,13 +1102,11 @@ class DahuaClient:
             nonce = nonce_m.group(1)
 
             def _digest(method: str, uri: str) -> str:
-                ha1 = md5("{}:{}:{}".format(
-                    self._username, realm, self._password
-                ).encode()).hexdigest()
+                ha1 = md5(
+                    "{}:{}:{}".format(self._username, realm, self._password).encode()
+                ).hexdigest()
                 ha2 = md5("{}:{}".format(method, uri).encode()).hexdigest()
-                resp_hash = md5("{}:{}:{}".format(
-                    ha1, nonce, ha2
-                ).encode()).hexdigest()
+                resp_hash = md5("{}:{}:{}".format(ha1, nonce, ha2).encode()).hexdigest()
                 return (
                     'Digest username="{}", realm="{}", nonce="{}", '
                     'uri="{}", response="{}"'
@@ -1118,7 +1114,8 @@ class DahuaClient:
 
             # --- DESCRIBE (authenticated) ---
             resp = await _rtsp_send(
-                "DESCRIBE", rtsp_url,
+                "DESCRIBE",
+                rtsp_url,
                 "Accept: application/sdp\r\n"
                 "Require: www.onvif.org/ver20/backchannel\r\n"
                 "Authorization: {}\r\n".format(_digest("DESCRIBE", uri_path)),
@@ -1141,7 +1138,8 @@ class DahuaClient:
             setup_url = "{}/trackID={}".format(rtsp_url, bc_track)
             setup_uri = "{}/trackID={}".format(uri_path, bc_track)
             resp = await _rtsp_send(
-                "SETUP", setup_url,
+                "SETUP",
+                setup_url,
                 "Transport: RTP/AVP/TCP;unicast;interleaved=0-1\r\n"
                 "Authorization: {}\r\n".format(_digest("SETUP", setup_uri)),
             )
@@ -1158,9 +1156,7 @@ class DahuaClient:
             rtp_channel = int(il_m.group(1)) if il_m else 0
 
             # --- PLAY ---
-            play_headers = "Authorization: {}\r\n".format(
-                _digest("PLAY", uri_path)
-            )
+            play_headers = "Authorization: {}\r\n".format(_digest("PLAY", uri_path))
             if session_id:
                 play_headers += "Session: {}\r\n".format(session_id)
             resp = await _rtsp_send("PLAY", rtsp_url, play_headers)
@@ -1203,9 +1199,9 @@ class DahuaClient:
                 rtp_packet = rtp_header + au_section + raw_aac
 
                 # RTSP interleaved frame: $ + channel + length + data
-                interleaved = struct.pack(
-                    ">cBH", b"$", rtp_channel, len(rtp_packet)
-                ) + rtp_packet
+                interleaved = (
+                    struct.pack(">cBH", b"$", rtp_channel, len(rtp_packet)) + rtp_packet
+                )
 
                 writer.write(interleaved)
                 await writer.drain()
@@ -1224,9 +1220,7 @@ class DahuaClient:
             await asyncio.sleep(0.5)
 
             # --- TEARDOWN ---
-            td_headers = "Authorization: {}\r\n".format(
-                _digest("TEARDOWN", uri_path)
-            )
+            td_headers = "Authorization: {}\r\n".format(_digest("TEARDOWN", uri_path))
             if session_id:
                 td_headers += "Session: {}\r\n".format(session_id)
             try:
