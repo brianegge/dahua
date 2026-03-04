@@ -49,7 +49,7 @@ async def async_setup_entry(
         pass
 
     # Add privacy mode switch if RPC2 client is available
-    if hasattr(coordinator, 'rpc2_client') and coordinator.rpc2_client:
+    if hasattr(coordinator, "rpc2_client") and coordinator.rpc2_client:
         devices.append(DahuaPrivacyModeBinarySwitch(coordinator, entry))
 
     async_add_devices(devices)

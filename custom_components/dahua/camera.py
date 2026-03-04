@@ -106,7 +106,7 @@ async def async_setup_entry(
         {
             vol.Required("enabled", default=False): bool,
         },
-        "async_set_privacy_mode"
+        "async_set_privacy_mode",
     )
 
     platform.async_register_entity_service(
