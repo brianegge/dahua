@@ -485,9 +485,6 @@ class DahuaClient:
         return await self.get(url)
 
     async def async_setprivacymask(self, index: int, enabled: bool) -> dict[str, Any]:
-
-        
-    async def async_setprivacymask(self, index: int, enabled: bool):
         """
         async_setprivacymask will enable or disable the privacy mask
         """
