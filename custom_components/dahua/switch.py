@@ -274,7 +274,7 @@ class DahuaPrivacyModeBinarySwitch(DahuaBaseEntity, SwitchEntity):
     @property
     def icon(self):
         """Return the icon of this switch."""
-        return PRIVACY_MODE_ICON
+        return "mdi:eye-off"
 
     @property
     def is_on(self):

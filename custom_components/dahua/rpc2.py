@@ -85,7 +85,7 @@ class DahuaRpc2Client:
                     resp_text = await resp.text()
                     try:
                         resp_json = json.loads(resp_text)
-                    except json.JSONDecodeError as e:
+                    except json.JSONDecodeError:
                         _LOGGER.error("Failed to parse JSON response after re-login: %s", resp_text)
                         raise ConnectionError(f"Invalid JSON response: {resp_text}")
                     
