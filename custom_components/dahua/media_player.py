@@ -92,7 +92,7 @@ def _resolve_media_id(media_id: str) -> str | Path:
     """
     prefix = "media-source://media_source/local/"
     if media_id.startswith(prefix):
-        return Path("/media") / media_id[len(prefix):]
+        return Path("/media") / media_id[len(prefix) :]
     if media_id.startswith("/"):
         return Path(media_id)
     return media_id
@@ -152,9 +152,7 @@ class DahuaSpeaker(DahuaBaseEntity, MediaPlayerEntity):
                     aac_data, channel, encoding="AAC", duration=duration
                 )
             except Exception as exc:
-                _LOGGER.info(
-                    "HTTP audio.cgi failed (%s), trying RTSP backchannel", exc
-                )
+                _LOGGER.info("HTTP audio.cgi failed (%s), trying RTSP backchannel", exc)
                 await self._coordinator.client.async_post_audio_backchannel(
                     aac_data, channel, duration=duration
                 )
