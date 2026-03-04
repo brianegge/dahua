@@ -2,7 +2,8 @@
   "domain": "dahua",
   "name": "Dahua",
   "after_dependencies": [
-    "tag"
+    "tag",
+    "number"
   ],
   "codeowners": [
     "@brianegge"

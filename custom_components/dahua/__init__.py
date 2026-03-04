@@ -384,8 +384,10 @@ class DahuaDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     "Device supports Lighting_V2=%s", self._supports_lighting_v2
                 )
 
-                _LOGGER.info("Device supports Lighting_V2=%s", self._supports_lighting_v2)
-                
+                _LOGGER.info(
+                    "Device supports Lighting_V2=%s", self._supports_lighting_v2
+                )
+
                 try:
                     await self.client.async_get_zoomfocus_v1()
                     self._supports_zoom_focus = True
@@ -519,7 +521,9 @@ class DahuaDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             if self._supports_lighting_v2:  # add lighing_v2 API if it is supported
                 coros.append(asyncio.ensure_future(self.client.async_get_lighting_v2()))
             if self._supports_zoom_focus:
-                coros.append(asyncio.ensure_future(self.client.async_get_zoomfocus_v1()))
+                coros.append(
+                    asyncio.ensure_future(self.client.async_get_zoomfocus_v1())
+                )
 
             # Gather results and update the data map
             results = await asyncio.gather(*coros)
@@ -1010,9 +1014,9 @@ class DahuaDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     def supports_smart_motion_detection_amcrest(self) -> bool:
         """True if smart motion detection is supported for an amcrest device"""
         return self.model == "AD410" or self.model == "DB61i"
-    
+
     def supports_focus_zoom(self) -> bool:
-        """ True if camera is varifocal """
+        """True if camera is varifocal"""
         return self._supports_zoom_focus
 
     def get_vto_client(self) -> DahuaVTOClient | None:
@@ -1023,13 +1027,12 @@ class DahuaDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         return self._vto_client
 
         return self.dahua_vto_event_thread.vto_client
-    
+
     def get_zoom(self) -> float:
         return float(self.data.get("status.Zoom")) if self._supports_zoom_focus else 0
-        
-    
+
     def get_focus(self) -> float:
-        return float(self.data.get("status.Focus")) if self._supports_zoom_focus else 0        
+        return float(self.data.get("status.Focus")) if self._supports_zoom_focus else 0
 
 
 async def async_remove_config_entry_device(
