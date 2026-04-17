@@ -20,6 +20,9 @@ jobs:
       - id: release
         uses: googleapis/release-please-action@v4
         with:
+          # Fine-grained PAT so the release PR triggers other workflows
+          # (GITHUB_TOKEN-authored PRs are blocked from triggering Actions).
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN }}
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
 
@@ -29,7 +32,7 @@ jobs:
       - name: Enable auto-merge on release PR (daily)
         if: github.event_name == 'schedule' && steps.release.outputs.pr != ''
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.RELEASE_PLEASE_TOKEN }}
           PR_JSON: ${{ steps.release.outputs.pr }}
         run: |
           PR_NUMBER=$(echo "$PR_JSON" | jq -r '.number')
