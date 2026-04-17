@@ -38,9 +38,12 @@ MOCK_DEVICE_DATA = {
 
 async def test_user_flow_success(hass: HomeAssistant):
     """Test a successful config flow from the user step through the name step."""
-    with patch(
-        "custom_components.dahua.config_flow.DahuaFlowHandler._test_credentials",
-        return_value=MOCK_DEVICE_DATA,
+    with (
+        patch(
+            "custom_components.dahua.config_flow.DahuaFlowHandler._test_credentials",
+            return_value=MOCK_DEVICE_DATA,
+        ),
+        patch("custom_components.dahua.async_setup_entry", return_value=True),
     ):
         # Step 1: show user form
         result = await hass.config_entries.flow.async_init(
@@ -217,9 +220,12 @@ async def test_user_flow_with_channel_gt_0(hass: HomeAssistant):
     """Test config flow with channel > 0 appends channel to unique_id."""
     input_with_channel = {**MOCK_USER_INPUT, CONF_CHANNEL: 1}
 
-    with patch(
-        "custom_components.dahua.config_flow.DahuaFlowHandler._test_credentials",
-        return_value=MOCK_DEVICE_DATA,
+    with (
+        patch(
+            "custom_components.dahua.config_flow.DahuaFlowHandler._test_credentials",
+            return_value=MOCK_DEVICE_DATA,
+        ),
+        patch("custom_components.dahua.async_setup_entry", return_value=True),
     ):
         result = await hass.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
@@ -249,9 +255,13 @@ async def test_reconfigure_flow_success(hass: HomeAssistant):
     )
     entry.add_to_hass(hass)
 
-    with patch(
-        "custom_components.dahua.config_flow.DahuaFlowHandler._test_credentials",
-        return_value=MOCK_DEVICE_DATA,
+    with (
+        patch(
+            "custom_components.dahua.config_flow.DahuaFlowHandler._test_credentials",
+            return_value=MOCK_DEVICE_DATA,
+        ),
+        patch("custom_components.dahua.async_setup_entry", return_value=True),
+        patch("custom_components.dahua.async_unload_entry", return_value=True),
     ):
         result = await hass.config_entries.flow.async_init(
             DOMAIN,
