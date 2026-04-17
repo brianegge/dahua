@@ -2,5 +2,12 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
     "config:recommended"
+  ],
+  "packageRules": [
+    {
+      "matchPackageNames": ["pycares"],
+      "allowedVersions": "<5.0.0",
+      "description": "pycares 5.x removed ares_query_a_result which Home Assistant still uses. Revisit once upstream HA adapts."
+    }
   ]
 }
