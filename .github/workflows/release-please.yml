@@ -23,14 +23,15 @@ jobs:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
 
-      # On the daily schedule, merge any open release PR so a release is cut.
-      # On push runs we only update the release PR; merging happens on cron.
-      - name: Merge release PR (daily)
+      # On the daily schedule, enable auto-merge on the open release PR.
+      # GitHub will merge it once all required status checks pass, so a
+      # release is cut at most once per day AND only if CI is green.
+      - name: Enable auto-merge on release PR (daily)
         if: github.event_name == 'schedule' && steps.release.outputs.pr != ''
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_JSON: ${{ steps.release.outputs.pr }}
         run: |
           PR_NUMBER=$(echo "$PR_JSON" | jq -r '.number')
-          echo "Merging release PR #$PR_NUMBER"
-          gh pr merge "$PR_NUMBER" --squash --delete-branch
+          echo "Enabling auto-merge on release PR #$PR_NUMBER"
+          gh pr merge "$PR_NUMBER" --auto --squash --delete-branch
