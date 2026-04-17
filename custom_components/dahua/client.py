@@ -13,7 +13,6 @@ from collections.abc import Callable
 from typing import Any
 
 import aiohttp
-import async_timeout
 
 from .digest import DigestAuth
 from hashlib import md5
@@ -990,7 +989,7 @@ class DahuaClient:
         url = (
             "{0}/cgi-bin/audio.cgi?action=getAudio&httptype=singlepart&channel={1}"
         ).format(self._base, channel)
-        async with async_timeout.timeout(TIMEOUT_SECONDS):
+        async with asyncio.timeout(TIMEOUT_SECONDS):
             auth = DigestAuth(self._username, self._password, self._session)
             response = await auth.request("GET", url)
             response.raise_for_status()
@@ -1027,7 +1026,7 @@ class DahuaClient:
         # Prime digest auth with a lightweight GET so the POST is
         # authenticated on first attempt (camera drops un-authed POSTs).
         prime_auth = DigestAuth(self._username, self._password, self._session)
-        async with async_timeout.timeout(TIMEOUT_SECONDS):
+        async with asyncio.timeout(TIMEOUT_SECONDS):
             prime_resp = await prime_auth.request(
                 "GET", self._base + "/cgi-bin/magicBox.cgi?action=getMachineName"
             )
@@ -1080,7 +1079,7 @@ class DahuaClient:
 
         response = None
         try:
-            async with async_timeout.timeout(duration + 10):
+            async with asyncio.timeout(duration + 10):
                 response = await auth.request("POST", url, headers=headers, data=body)
         except asyncio.TimeoutError:
             # Expected for cameras that treat this as a streaming endpoint
@@ -1318,7 +1317,7 @@ class DahuaClient:
 
     async def get_bytes(self, url: str) -> bytes:
         """Get information from the API. This will return the raw response and not process it"""
-        async with async_timeout.timeout(TIMEOUT_SECONDS):
+        async with asyncio.timeout(TIMEOUT_SECONDS):
             response = None
             try:
                 auth = DigestAuth(self._username, self._password, self._session)
@@ -1335,7 +1334,7 @@ class DahuaClient:
         """Get information from the API."""
         url = self._base + url
         try:
-            async with async_timeout.timeout(TIMEOUT_SECONDS):
+            async with asyncio.timeout(TIMEOUT_SECONDS):
                 response = None
                 try:
                     auth = DigestAuth(self._username, self._password, self._session)
