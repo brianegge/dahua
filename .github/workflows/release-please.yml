@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - id: release
-        uses: googleapis/release-please-action@v4
+        uses: googleapis/release-please-action@v5
         with:
           # Fine-grained PAT so the release PR triggers other workflows
           # (GITHUB_TOKEN-authored PRs are blocked from triggering Actions).
