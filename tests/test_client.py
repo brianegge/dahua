@@ -5,6 +5,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import aiohttp
 import pytest
 
+from aiodahua import DahuaResponseError
 from custom_components.dahua.client import DahuaClient
 
 # --- Constructor tests ---
@@ -620,7 +621,12 @@ class TestAsyncSetVideoInDayNightMode:
             mock_auth = mock_auth_cls.return_value
             mock_auth.request = AsyncMock(return_value=mock_response)
 
-            with pytest.raises(Exception, match="Could not set Day/Night mode"):
+            # A 200 carrying an "Error" body is now rejected by the transport
+            # itself, so this raises DahuaResponseError before reaching the
+            # method's own "Could not set Day/Night mode" check. It still
+            # raises, and DahuaResponseError is a ClientResponseError, so the
+            # integration's existing handlers are unaffected.
+            with pytest.raises(DahuaResponseError):
                 await client.async_set_video_in_day_night_mode(0, "general", "auto")
 
 

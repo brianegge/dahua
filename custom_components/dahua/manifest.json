@@ -13,7 +13,7 @@
   "documentation": "https://github.com/brianegge/dahua",
   "iot_class": "local_polling",
   "requirements": [
-    "aiodahua==0.2.0"
+    "aiodahua==0.4.1"
   ],
   "issue_tracker": "https://github.com/brianegge/dahua/issues",
   "version": "0.10.0"
