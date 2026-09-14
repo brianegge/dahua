@@ -43,7 +43,10 @@ jobs:
       - name: Setup Python
         uses: "actions/setup-python@v6"
         with:
-          python-version: "3.8"
+          python-version: "3.14"
+          cache: "pip"
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install -y libturbojpeg0-dev
       - name: Install requirements
         run: python3 -m pip install -r requirements_test.txt
       - name: Run tests
