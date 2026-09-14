@@ -1,3 +1,4 @@
 pytest-homeassistant-custom-component==0.13.365
+aiodahua==0.4.1
 pycares>=5.0.0
 PyTurboJPEG>=1.6.0
