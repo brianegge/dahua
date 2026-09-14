@@ -5,6 +5,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import aiohttp
 import pytest
 
+from aiodahua import DahuaResponseError
 from custom_components.dahua.client import DahuaClient
 
 # --- Constructor tests ---
@@ -99,11 +100,13 @@ class TestGet:
         client = DahuaClient("admin", "pass", "192.168.1.1", 80, 554, session)
 
         mock_response = AsyncMock()
+
+        mock_response.status = 200
         mock_response.raise_for_status = MagicMock()
         mock_response.text = AsyncMock(return_value="key=value")
         mock_response.close = MagicMock()
 
-        with patch("custom_components.dahua.client.DigestAuth") as mock_auth_cls:
+        with patch("aiodahua.client.DigestAuth") as mock_auth_cls:
             mock_auth = mock_auth_cls.return_value
             mock_auth.request = AsyncMock(return_value=mock_response)
 
@@ -117,11 +120,13 @@ class TestGet:
         client = DahuaClient("admin", "pass", "192.168.1.1", 80, 554, session)
 
         mock_response = AsyncMock()
+
+        mock_response.status = 200
         mock_response.raise_for_status = MagicMock()
         mock_response.text = AsyncMock(return_value="OK")
         mock_response.close = MagicMock()
 
-        with patch("custom_components.dahua.client.DigestAuth") as mock_auth_cls:
+        with patch("aiodahua.client.DigestAuth") as mock_auth_cls:
             mock_auth = mock_auth_cls.return_value
             mock_auth.request = AsyncMock(return_value=mock_response)
 
@@ -134,11 +139,13 @@ class TestGet:
         client = DahuaClient("admin", "pass", "192.168.1.1", 80, 554, session)
 
         mock_response = AsyncMock()
+
+        mock_response.status = 200
         mock_response.raise_for_status = MagicMock()
         mock_response.text = AsyncMock(return_value="Error")
         mock_response.close = MagicMock()
 
-        with patch("custom_components.dahua.client.DigestAuth") as mock_auth_cls:
+        with patch("aiodahua.client.DigestAuth") as mock_auth_cls:
             mock_auth = mock_auth_cls.return_value
             mock_auth.request = AsyncMock(return_value=mock_response)
 
@@ -152,7 +159,7 @@ class TestGet:
         session = MagicMock()
         client = DahuaClient("admin", "pass", "192.168.1.1", 80, 554, session)
 
-        with patch("custom_components.dahua.client.DigestAuth") as mock_auth_cls:
+        with patch("aiodahua.client.DigestAuth") as mock_auth_cls:
             mock_auth = mock_auth_cls.return_value
             mock_auth.request = AsyncMock(side_effect=asyncio.TimeoutError())
 
@@ -164,7 +171,7 @@ class TestGet:
         session = MagicMock()
         client = DahuaClient("admin", "pass", "192.168.1.1", 80, 554, session)
 
-        with patch("custom_components.dahua.client.DigestAuth") as mock_auth_cls:
+        with patch("aiodahua.client.DigestAuth") as mock_auth_cls:
             mock_auth = mock_auth_cls.return_value
             mock_auth.request = AsyncMock(side_effect=aiohttp.ClientError("fail"))
 
@@ -182,11 +189,13 @@ class TestGetBytes:
         client = DahuaClient("admin", "pass", "192.168.1.1", 80, 554, session)
 
         mock_response = AsyncMock()
+
+        mock_response.status = 200
         mock_response.raise_for_status = MagicMock()
         mock_response.read = AsyncMock(return_value=b"\xff\xd8\xff\xe0")
         mock_response.close = MagicMock()
 
-        with patch("custom_components.dahua.client.DigestAuth") as mock_auth_cls:
+        with patch("aiodahua.client.DigestAuth") as mock_auth_cls:
             mock_auth = mock_auth_cls.return_value
             mock_auth.request = AsyncMock(return_value=mock_response)
 
@@ -205,13 +214,15 @@ class TestAsyncGetSystemInfo:
         client = DahuaClient("admin", "pass", "192.168.1.1", 80, 554, session)
 
         mock_response = AsyncMock()
+
+        mock_response.status = 200
         mock_response.raise_for_status = MagicMock()
         mock_response.text = AsyncMock(
             return_value="deviceType=IPC-HDW5831R-ZE\nserialNumber=ABC123"
         )
         mock_response.close = MagicMock()
 
-        with patch("custom_components.dahua.client.DigestAuth") as mock_auth_cls:
+        with patch("aiodahua.client.DigestAuth") as mock_auth_cls:
             mock_auth = mock_auth_cls.return_value
             mock_auth.request = AsyncMock(return_value=mock_response)
 
@@ -227,7 +238,7 @@ class TestAsyncGetSystemInfo:
         req_info = MagicMock()
         req_info.real_url = "http://test"
 
-        with patch("custom_components.dahua.client.DigestAuth") as mock_auth_cls:
+        with patch("aiodahua.client.DigestAuth") as mock_auth_cls:
             mock_auth = mock_auth_cls.return_value
             mock_auth.request = AsyncMock(
                 side_effect=aiohttp.ClientResponseError(req_info, ())
@@ -244,11 +255,13 @@ class TestGetDeviceType:
         client = DahuaClient("admin", "pass", "192.168.1.1", 80, 554, session)
 
         mock_response = AsyncMock()
+
+        mock_response.status = 200
         mock_response.raise_for_status = MagicMock()
         mock_response.text = AsyncMock(return_value="type=IPC-HDW5831R-ZE")
         mock_response.close = MagicMock()
 
-        with patch("custom_components.dahua.client.DigestAuth") as mock_auth_cls:
+        with patch("aiodahua.client.DigestAuth") as mock_auth_cls:
             mock_auth = mock_auth_cls.return_value
             mock_auth.request = AsyncMock(return_value=mock_response)
 
@@ -263,7 +276,7 @@ class TestGetDeviceType:
         req_info = MagicMock()
         req_info.real_url = "http://test"
 
-        with patch("custom_components.dahua.client.DigestAuth") as mock_auth_cls:
+        with patch("aiodahua.client.DigestAuth") as mock_auth_cls:
             mock_auth = mock_auth_cls.return_value
             mock_auth.request = AsyncMock(
                 side_effect=aiohttp.ClientResponseError(req_info, ())
@@ -280,11 +293,13 @@ class TestGetMaxExtraStreams:
         client = DahuaClient("admin", "pass", "192.168.1.1", 80, 554, session)
 
         mock_response = AsyncMock()
+
+        mock_response.status = 200
         mock_response.raise_for_status = MagicMock()
         mock_response.text = AsyncMock(return_value="table.MaxExtraStream=2")
         mock_response.close = MagicMock()
 
-        with patch("custom_components.dahua.client.DigestAuth") as mock_auth_cls:
+        with patch("aiodahua.client.DigestAuth") as mock_auth_cls:
             mock_auth = mock_auth_cls.return_value
             mock_auth.request = AsyncMock(return_value=mock_response)
 
@@ -299,7 +314,7 @@ class TestGetMaxExtraStreams:
         req_info = MagicMock()
         req_info.real_url = "http://test"
 
-        with patch("custom_components.dahua.client.DigestAuth") as mock_auth_cls:
+        with patch("aiodahua.client.DigestAuth") as mock_auth_cls:
             mock_auth = mock_auth_cls.return_value
             mock_auth.request = AsyncMock(
                 side_effect=aiohttp.ClientResponseError(req_info, ())
@@ -316,11 +331,13 @@ class TestEnableMotionDetection:
         client = DahuaClient("admin", "pass", "192.168.1.1", 80, 554, session)
 
         mock_response = AsyncMock()
+
+        mock_response.status = 200
         mock_response.raise_for_status = MagicMock()
         mock_response.text = AsyncMock(return_value="OK")
         mock_response.close = MagicMock()
 
-        with patch("custom_components.dahua.client.DigestAuth") as mock_auth_cls:
+        with patch("aiodahua.client.DigestAuth") as mock_auth_cls:
             mock_auth = mock_auth_cls.return_value
             mock_auth.request = AsyncMock(return_value=mock_response)
 
@@ -335,16 +352,19 @@ class TestEnableMotionDetection:
 
         # First call returns non-OK, second call returns OK
         mock_resp_fail = AsyncMock()
+        mock_resp_fail.status = 200
         mock_resp_fail.raise_for_status = MagicMock()
         mock_resp_fail.text = AsyncMock(return_value="Error")
         mock_resp_fail.close = MagicMock()
 
         mock_resp_ok = AsyncMock()
+
+        mock_resp_ok.status = 200
         mock_resp_ok.raise_for_status = MagicMock()
         mock_resp_ok.text = AsyncMock(return_value="OK")
         mock_resp_ok.close = MagicMock()
 
-        with patch("custom_components.dahua.client.DigestAuth") as mock_auth_cls:
+        with patch("aiodahua.client.DigestAuth") as mock_auth_cls:
             mock_auth = mock_auth_cls.return_value
             mock_auth.request = AsyncMock(side_effect=[mock_resp_fail, mock_resp_ok])
 
@@ -359,11 +379,13 @@ class TestAsyncSetLightingV1:
         client = DahuaClient("admin", "pass", "192.168.1.1", 80, 554, session)
 
         mock_response = AsyncMock()
+
+        mock_response.status = 200
         mock_response.raise_for_status = MagicMock()
         mock_response.text = AsyncMock(return_value="OK")
         mock_response.close = MagicMock()
 
-        with patch("custom_components.dahua.client.DigestAuth") as mock_auth_cls:
+        with patch("aiodahua.client.DigestAuth") as mock_auth_cls:
             mock_auth = mock_auth_cls.return_value
             mock_auth.request = AsyncMock(return_value=mock_response)
 
@@ -378,11 +400,13 @@ class TestAsyncSetLightingV1:
         client = DahuaClient("admin", "pass", "192.168.1.1", 80, 554, session)
 
         mock_response = AsyncMock()
+
+        mock_response.status = 200
         mock_response.raise_for_status = MagicMock()
         mock_response.text = AsyncMock(return_value="OK")
         mock_response.close = MagicMock()
 
-        with patch("custom_components.dahua.client.DigestAuth") as mock_auth_cls:
+        with patch("aiodahua.client.DigestAuth") as mock_auth_cls:
             mock_auth = mock_auth_cls.return_value
             mock_auth.request = AsyncMock(return_value=mock_response)
 
@@ -398,11 +422,13 @@ class TestAsyncSetVideoProfileMode:
         client = DahuaClient("admin", "pass", "192.168.1.1", 80, 554, session)
 
         mock_response = AsyncMock()
+
+        mock_response.status = 200
         mock_response.raise_for_status = MagicMock()
         mock_response.text = AsyncMock(return_value="ok")
         mock_response.close = MagicMock()
 
-        with patch("custom_components.dahua.client.DigestAuth") as mock_auth_cls:
+        with patch("aiodahua.client.DigestAuth") as mock_auth_cls:
             mock_auth = mock_auth_cls.return_value
             mock_auth.request = AsyncMock(return_value=mock_response)
 
@@ -416,11 +442,13 @@ class TestAsyncSetVideoProfileMode:
         client = DahuaClient("admin", "pass", "192.168.1.1", 80, 554, session)
 
         mock_response = AsyncMock()
+
+        mock_response.status = 200
         mock_response.raise_for_status = MagicMock()
         mock_response.text = AsyncMock(return_value="ok")
         mock_response.close = MagicMock()
 
-        with patch("custom_components.dahua.client.DigestAuth") as mock_auth_cls:
+        with patch("aiodahua.client.DigestAuth") as mock_auth_cls:
             mock_auth = mock_auth_cls.return_value
             mock_auth.request = AsyncMock(return_value=mock_response)
 
@@ -436,11 +464,13 @@ class TestAsyncSetLightingV2ForAmcrestDoorbells:
         client = DahuaClient("admin", "pass", "192.168.1.1", 80, 554, session)
 
         mock_response = AsyncMock()
+
+        mock_response.status = 200
         mock_response.raise_for_status = MagicMock()
         mock_response.text = AsyncMock(return_value="OK")
         mock_response.close = MagicMock()
 
-        with patch("custom_components.dahua.client.DigestAuth") as mock_auth_cls:
+        with patch("aiodahua.client.DigestAuth") as mock_auth_cls:
             mock_auth = mock_auth_cls.return_value
             mock_auth.request = AsyncMock(return_value=mock_response)
 
@@ -455,11 +485,13 @@ class TestAsyncSetLightingV2ForAmcrestDoorbells:
         client = DahuaClient("admin", "pass", "192.168.1.1", 80, 554, session)
 
         mock_response = AsyncMock()
+
+        mock_response.status = 200
         mock_response.raise_for_status = MagicMock()
         mock_response.text = AsyncMock(return_value="OK")
         mock_response.close = MagicMock()
 
-        with patch("custom_components.dahua.client.DigestAuth") as mock_auth_cls:
+        with patch("aiodahua.client.DigestAuth") as mock_auth_cls:
             mock_auth = mock_auth_cls.return_value
             mock_auth.request = AsyncMock(return_value=mock_response)
 
@@ -474,11 +506,13 @@ class TestAsyncSetLightingV2ForAmcrestDoorbells:
         client = DahuaClient("admin", "pass", "192.168.1.1", 80, 554, session)
 
         mock_response = AsyncMock()
+
+        mock_response.status = 200
         mock_response.raise_for_status = MagicMock()
         mock_response.text = AsyncMock(return_value="OK")
         mock_response.close = MagicMock()
 
-        with patch("custom_components.dahua.client.DigestAuth") as mock_auth_cls:
+        with patch("aiodahua.client.DigestAuth") as mock_auth_cls:
             mock_auth = mock_auth_cls.return_value
             mock_auth.request = AsyncMock(return_value=mock_response)
 
@@ -494,11 +528,13 @@ class TestAsyncSetRecordMode:
         client = DahuaClient("admin", "pass", "192.168.1.1", 80, 554, session)
 
         mock_response = AsyncMock()
+
+        mock_response.status = 200
         mock_response.raise_for_status = MagicMock()
         mock_response.text = AsyncMock(return_value="OK")
         mock_response.close = MagicMock()
 
-        with patch("custom_components.dahua.client.DigestAuth") as mock_auth_cls:
+        with patch("aiodahua.client.DigestAuth") as mock_auth_cls:
             mock_auth = mock_auth_cls.return_value
             mock_auth.request = AsyncMock(return_value=mock_response)
 
@@ -512,11 +548,13 @@ class TestAsyncSetRecordMode:
         client = DahuaClient("admin", "pass", "192.168.1.1", 80, 554, session)
 
         mock_response = AsyncMock()
+
+        mock_response.status = 200
         mock_response.raise_for_status = MagicMock()
         mock_response.text = AsyncMock(return_value="OK")
         mock_response.close = MagicMock()
 
-        with patch("custom_components.dahua.client.DigestAuth") as mock_auth_cls:
+        with patch("aiodahua.client.DigestAuth") as mock_auth_cls:
             mock_auth = mock_auth_cls.return_value
             mock_auth.request = AsyncMock(return_value=mock_response)
 
@@ -530,11 +568,13 @@ class TestAsyncSetRecordMode:
         client = DahuaClient("admin", "pass", "192.168.1.1", 80, 554, session)
 
         mock_response = AsyncMock()
+
+        mock_response.status = 200
         mock_response.raise_for_status = MagicMock()
         mock_response.text = AsyncMock(return_value="OK")
         mock_response.close = MagicMock()
 
-        with patch("custom_components.dahua.client.DigestAuth") as mock_auth_cls:
+        with patch("aiodahua.client.DigestAuth") as mock_auth_cls:
             mock_auth = mock_auth_cls.return_value
             mock_auth.request = AsyncMock(return_value=mock_response)
 
@@ -550,11 +590,13 @@ class TestAsyncSetVideoInDayNightMode:
         client = DahuaClient("admin", "pass", "192.168.1.1", 80, 554, session)
 
         mock_response = AsyncMock()
+
+        mock_response.status = 200
         mock_response.raise_for_status = MagicMock()
         mock_response.text = AsyncMock(return_value="OK")
         mock_response.close = MagicMock()
 
-        with patch("custom_components.dahua.client.DigestAuth") as mock_auth_cls:
+        with patch("aiodahua.client.DigestAuth") as mock_auth_cls:
             mock_auth = mock_auth_cls.return_value
             mock_auth.request = AsyncMock(return_value=mock_response)
 
@@ -569,15 +611,22 @@ class TestAsyncSetVideoInDayNightMode:
         client = DahuaClient("admin", "pass", "192.168.1.1", 80, 554, session)
 
         mock_response = AsyncMock()
+
+        mock_response.status = 200
         mock_response.raise_for_status = MagicMock()
         mock_response.text = AsyncMock(return_value="Error")
         mock_response.close = MagicMock()
 
-        with patch("custom_components.dahua.client.DigestAuth") as mock_auth_cls:
+        with patch("aiodahua.client.DigestAuth") as mock_auth_cls:
             mock_auth = mock_auth_cls.return_value
             mock_auth.request = AsyncMock(return_value=mock_response)
 
-            with pytest.raises(Exception, match="Could not set Day/Night mode"):
+            # A 200 carrying an "Error" body is now rejected by the transport
+            # itself, so this raises DahuaResponseError before reaching the
+            # method's own "Could not set Day/Night mode" check. It still
+            # raises, and DahuaResponseError is a ClientResponseError, so the
+            # integration's existing handlers are unaffected.
+            with pytest.raises(DahuaResponseError):
                 await client.async_set_video_in_day_night_mode(0, "general", "auto")
 
 
@@ -589,11 +638,13 @@ class TestAsyncSetEventNotifications:
         client = DahuaClient("admin", "pass", "192.168.1.1", 80, 554, session)
 
         mock_response = AsyncMock()
+
+        mock_response.status = 200
         mock_response.raise_for_status = MagicMock()
         mock_response.text = AsyncMock(return_value="OK")
         mock_response.close = MagicMock()
 
-        with patch("custom_components.dahua.client.DigestAuth") as mock_auth_cls:
+        with patch("aiodahua.client.DigestAuth") as mock_auth_cls:
             mock_auth = mock_auth_cls.return_value
             mock_auth.request = AsyncMock(return_value=mock_response)
 
@@ -608,11 +659,13 @@ class TestAsyncSetEventNotifications:
         client = DahuaClient("admin", "pass", "192.168.1.1", 80, 554, session)
 
         mock_response = AsyncMock()
+
+        mock_response.status = 200
         mock_response.raise_for_status = MagicMock()
         mock_response.text = AsyncMock(return_value="OK")
         mock_response.close = MagicMock()
 
-        with patch("custom_components.dahua.client.DigestAuth") as mock_auth_cls:
+        with patch("aiodahua.client.DigestAuth") as mock_auth_cls:
             mock_auth = mock_auth_cls.return_value
             mock_auth.request = AsyncMock(return_value=mock_response)
 
@@ -635,6 +688,7 @@ class TestStreamEvents:
 
         # Create a mock response with async iterator
         mock_response = AsyncMock()
+        mock_response.status = 200
         mock_response.raise_for_status = MagicMock()
         mock_response.close = MagicMock()
 
@@ -644,7 +698,7 @@ class TestStreamEvents:
         mock_response.content = MagicMock()
         mock_response.content.iter_chunks = mock_iter_chunks
 
-        with patch("custom_components.dahua.client.DigestAuth") as mock_auth_cls:
+        with patch("aiodahua.client.DigestAuth") as mock_auth_cls:
             mock_auth = mock_auth_cls.return_value
             mock_auth.request = AsyncMock(return_value=mock_response)
 
@@ -1302,7 +1356,7 @@ class TestAsyncSetServiceSetChannelTitle:
         ) as mock_get:
             await client.async_set_service_set_channel_title(0, "Title1", "Title2")
             url = mock_get.call_args[0][0]
-            assert "ChannelTitle[0].Name=Title1|Title2" in url
+            assert "ChannelTitle[0].Name=Title1%7CTitle2" in url
 
     @pytest.mark.asyncio
     async def test_failure_raises(self):
@@ -1329,7 +1383,7 @@ class TestAsyncSetServiceSetTextOverlay:
         ) as mock_get:
             await client.async_set_service_set_text_overlay(0, 1, "a", "b", "c", "d")
             url = mock_get.call_args[0][0]
-            assert "CustomTitle[1].Text=a|b|c|d" in url
+            assert "CustomTitle[1].Text=a%7Cb%7Cc%7Cd" in url
 
     @pytest.mark.asyncio
     async def test_failure_raises(self):
@@ -1358,7 +1412,7 @@ class TestAsyncSetServiceSetCustomOverlay:
         ) as mock_get:
             await client.async_set_service_set_custom_overlay(0, 0, "x", "y")
             url = mock_get.call_args[0][0]
-            assert "UserDefinedTitle[0].Text=x|y" in url
+            assert "UserDefinedTitle[0].Text=x%7Cy" in url
 
     @pytest.mark.asyncio
     async def test_failure_raises(self):
@@ -1554,7 +1608,7 @@ class TestGetKeyError:
         session = MagicMock()
         client = DahuaClient("admin", "pass", "192.168.1.1", 80, 554, session)
 
-        with patch("custom_components.dahua.client.DigestAuth") as mock_auth_cls:
+        with patch("aiodahua.client.DigestAuth") as mock_auth_cls:
             mock_auth = mock_auth_cls.return_value
             mock_auth.request = AsyncMock(side_effect=KeyError("bad"))
 
